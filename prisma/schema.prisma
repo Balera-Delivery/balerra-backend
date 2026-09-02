@@ -1,0 +1,173 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  RIDER
+  ADMIN
+}
+
+enum AccountStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+}
+
+enum RiderAvailability {
+  ONLINE
+  OFFLINE
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  ACCEPTED
+  ARRIVED_AT_PICKUP
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+model Customer {
+  id            String         @id @default(uuid())
+  fullName      String
+  phoneNumber   String         @unique
+  email         String?        @unique
+  password      String
+  address       String?
+  status        AccountStatus  @default(ACTIVE)
+  fcmToken      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deliveries    Delivery[]
+  notifications Notification[]
+
+  @@map("customers")
+}
+
+model Rider {
+  id                 String             @id @default(uuid())
+  fullName           String
+  email              String             @unique
+  phoneNumber        String             @unique
+  password           String
+  availabilityStatus RiderAvailability  @default(OFFLINE)
+  accountStatus      AccountStatus      @default(PENDING_APPROVAL)
+  vehicleInfo        String?
+  currentLatitude    Float?
+  currentLongitude   Float?
+  heading            Float?
+  lastLocationUpdate DateTime?
+  fcmToken           String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deliveries         Delivery[]
+  notifications      Notification[]
+
+  @@map("riders")
+}
+
+model Admin {
+  id            String         @id @default(uuid())
+  fullName      String
+  email         String         @unique
+  password      String
+  role          String         @default("ADMIN") // SUPER_ADMIN, ADMIN
+  fcmToken      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
+
+  @@map("admins")
+}
+
+model Delivery {
+  id                  String               @id @default(uuid())
+  trackingCode        String               @unique
+  customerId          String
+  riderId             String?
+  pickupLocation      String
+  pickupLatitude      Float?
+  pickupLongitude     Float?
+  destination         String
+  destinationLatitude Float?
+  destinationLongitude Float?
+  itemType            String
+  itemDescription     String
+  receiverName        String
+  receiverPhone       String
+  specialInstructions String?
+  status              DeliveryStatus       @default(PENDING)
+  cancellationReason  String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  customer            Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rider               Rider?               @relation(fields: [riderId], references: [id], onDelete: SetNull)
+  otp                 OTP?
+  statusLogs          DeliveryStatusLog[]
+
+  @@map("deliveries")
+}
+
+model DeliveryStatusLog {
+  id          String         @id @default(uuid())
+  deliveryId  String
+  status      DeliveryStatus
+  updatedBy   String
+  notes       String?
+  createdAt   DateTime       @default(now())
+
+  delivery    Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_status_logs")
+}
+
+model OTP {
+  id          String    @id @default(uuid())
+  deliveryId  String    @unique
+  otpCode     String
+  isVerified  Boolean   @default(false)
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  delivery    Delivery  @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@map("otps")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userRole   Role
+  customerId String?
+  riderId    String?
+  adminId    String?
+  title      String
+  message    String
+  isRead     Boolean  @default(false)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rider      Rider?    @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  admin      Admin?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}

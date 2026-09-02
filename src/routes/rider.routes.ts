@@ -1,0 +1,61 @@
+import { Router } from 'express';
+import { RiderController } from '../controllers/rider.controller';
+import { authenticateJwt } from '../middleware/auth.middleware';
+import { authorizeRole } from '../middleware/role.middleware';
+import { validateRequest } from '../middleware/validate.middleware';
+import { Roles } from '../constants/roles';
+import {
+  updateRiderProfileSchema,
+  updateRiderStatusSchema,
+  updateRiderLocationSchema,
+} from '../validations/rider.validation';
+import { updateDeliveryStatusSchema, verifyOtpSchema } from '../validations/delivery.validation';
+
+const router = Router();
+
+// Guard all rider routes to authenticated RIDER role
+router.use(authenticateJwt, authorizeRole([Roles.RIDER]));
+
+// Status & Availability
+router.put('/status', validateRequest(updateRiderStatusSchema), RiderController.updateAvailability);
+
+// GPS Live Location Updates (called periodically by mobile app)
+router.put('/location', validateRequest(updateRiderLocationSchema), RiderController.updateLocation);
+
+// Assigned Deliveries & Actions
+router.get('/assigned', RiderController.getAssignedDeliveries);
+router.get('/active', RiderController.getActiveDelivery);
+router.post('/deliveries/:id/accept', RiderController.acceptDelivery);
+router.post('/deliveries/:id/reject', RiderController.rejectDelivery);
+router.put('/deliveries/:id/status', validateRequest(updateDeliveryStatusSchema), RiderController.updateDeliveryStatus);
+router.put('/delivery-status', validateRequest(updateDeliveryStatusSchema), (req, res, next) => {
+  // Support both /delivery-status?id=xxx or /deliveries/:id/status
+  if (req.query.id) {
+    req.params.id = req.query.id as string;
+    return RiderController.updateDeliveryStatus(req, res);
+  }
+  next();
+});
+
+// OTP Verification to complete delivery
+router.post('/deliveries/:id/verify-otp', validateRequest(verifyOtpSchema), RiderController.verifyOtp);
+router.post('/verify-otp', validateRequest(verifyOtpSchema), (req, res, next) => {
+  // Support both /verify-otp?id=xxx or /deliveries/:id/verify-otp
+  if (req.query.id) {
+    req.params.id = req.query.id as string;
+    return RiderController.verifyOtp(req, res);
+  }
+  next();
+});
+
+// Delivery History
+router.get('/history', RiderController.getDeliveryHistory);
+
+// Profile
+router.get('/profile', RiderController.getProfile);
+router.put('/profile', validateRequest(updateRiderProfileSchema), RiderController.updateProfile);
+
+// Notifications
+router.get('/notifications', RiderController.getNotifications);
+
+export default router;
