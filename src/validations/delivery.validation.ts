@@ -12,6 +12,28 @@ export const createDeliverySchema = z.object({
   receiverName: z.string().min(2, 'Receiver name is required'),
   receiverPhone: z.string().min(8, 'Receiver phone number is required'),
   specialInstructions: z.string().optional(),
+  // Optional food order fields if submitted from food/restaurant flow
+  restaurantId: z.string().optional(),
+  hotelId: z.string().optional(),
+  items: z.array(
+    z.object({
+      foodItemId: z.string().optional(),
+      name: z.string(),
+      price: z.number().optional(),
+      quantity: z.number().int().positive().default(1),
+      notes: z.string().optional(),
+    })
+  ).optional(),
+  // Payment and receipt upload fields
+  paymentMethod: z.string().optional(),
+  paymentStatus: z.string().optional(),
+  receiptUrl: z.string().optional(),
+});
+
+export const uploadPaymentReceiptSchema = z.object({
+  receiptUrl: z.string().min(1, 'Receipt URL / image data is required'),
+  paymentMethod: z.string().optional(),
+  paymentStatus: z.string().optional(),
 });
 
 export const updateDeliveryStatusSchema = z.object({

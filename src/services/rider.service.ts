@@ -139,12 +139,13 @@ export class RiderService {
       where: {
         riderId,
         status: {
-          in: ['ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED'],
+          in: ['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED'],
         },
       },
       include: {
         customer: { select: { id: true, fullName: true, phoneNumber: true, address: true } },
       },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

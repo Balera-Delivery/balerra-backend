@@ -36,6 +36,16 @@ enum DeliveryStatus {
   CANCELLED
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  ON_THE_WAY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
 model Customer {
   id            String         @id @default(uuid())
   fullName      String
@@ -48,6 +58,7 @@ model Customer {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   deliveries    Delivery[]
+  orders        Order[]
   notifications Notification[]
 
   @@map("customers")
@@ -89,6 +100,96 @@ model Admin {
   @@map("admins")
 }
 
+model Restaurant {
+  id           String     @id @default(uuid())
+  code         String?    @unique // e.g. HTL-001
+  name         String
+  aliases      String[]   @default([])
+  category     String     @default("Cafe & Restaurant")
+  cuisineType  String     @default("Local & Traditional Cuisine")
+  phone1       String     @default("")
+  phone2       String     @default("")
+  address      String     @default("Bale Robe, Ethiopia")
+  latitude     Float?
+  longitude    Float?
+  rating       Float      @default(4.8)
+  totalReviews Int        @default(0)
+  deliveryTime String     @default("25 - 40 min")
+  deliveryFee  Float      @default(60.0)
+  priceRange   String     @default("$$")
+  status       String     @default("Active") // Active, Inactive
+  openingHours String     @default("07:00 AM - 10:00 PM")
+  isPartner    Boolean    @default(true)
+  banner       String?    @db.Text
+  avatar       String?    @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  foods        FoodItem[]
+  orders       Order[]
+
+  @@map("restaurants")
+}
+
+model FoodItem {
+  id           String      @id @default(uuid())
+  code         String?     // e.g. FOOD-001-1
+  restaurantId String
+  name         String
+  category     String      @default("Main Dishes")
+  price        Float
+  description  String?     @db.Text
+  isAvailable  Boolean     @default(true)
+  tag          String?     @default("") // Popular, House Special, Spicy, Fast Selling
+  image        String?     @db.Text
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+
+  @@map("food_items")
+}
+
+model Order {
+  id                  String      @id @default(uuid())
+  orderNumber         String      @unique // e.g. ORD-2026-0001
+  customerId          String
+  restaurantId        String
+  deliveryId          String?     @unique
+  subtotal            Float
+  deliveryFee         Float       @default(60.0)
+  totalAmount         Float
+  status              OrderStatus @default(PENDING)
+  paymentMethod       String      @default("CASH_ON_DELIVERY")
+  paymentStatus       String      @default("PENDING")
+  receiptUrl          String?     @db.Text
+  specialInstructions String?     @db.Text
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  customer            Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant          Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  delivery            Delivery?   @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  items               OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String    @id @default(uuid())
+  orderId    String
+  foodItemId String?
+  name       String
+  price      Float
+  quantity   Int       @default(1)
+  subtotal   Float
+  notes      String?
+
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  foodItem   FoodItem? @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+
+  @@map("order_items")
+}
+
 model Delivery {
   id                  String               @id @default(uuid())
   trackingCode        String               @unique
@@ -105,6 +206,9 @@ model Delivery {
   receiverName        String
   receiverPhone       String
   specialInstructions String?
+  paymentMethod       String               @default("CASH_ON_DELIVERY")
+  paymentStatus       String               @default("PENDING")
+  receiptUrl          String?              @db.Text
   status              DeliveryStatus       @default(PENDING)
   cancellationReason  String?
   createdAt           DateTime             @default(now())
@@ -113,6 +217,7 @@ model Delivery {
   customer            Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
   rider               Rider?               @relation(fields: [riderId], references: [id], onDelete: SetNull)
   otp                 OTP?
+  order               Order?
   statusLogs          DeliveryStatusLog[]
 
   @@map("deliveries")

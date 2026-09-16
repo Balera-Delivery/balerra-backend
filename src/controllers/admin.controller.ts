@@ -237,6 +237,18 @@ export class AdminController {
     }
   }
 
+  static async updatePaymentStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const adminId = req.user!.userId;
+      const deliveryId = String(req.params.id);
+      const { paymentStatus } = req.body;
+      const result = await DeliveryService.updatePaymentStatus(deliveryId, paymentStatus, adminId);
+      sendSuccess({ res, message: `Payment status updated to ${paymentStatus}.`, data: result });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
   /**
    * Reports & Analytics
    */

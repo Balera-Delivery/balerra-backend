@@ -159,4 +159,27 @@ export class CustomerController {
       sendError({ res, statusCode: HttpStatus.NOT_FOUND, message: error.message });
     }
   }
+
+  static async uploadPaymentReceipt(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const customerId = req.user!.userId;
+      const deliveryId = String(req.params.id);
+      const { receiptUrl, paymentMethod, paymentStatus } = req.body;
+
+      const updated = await DeliveryService.uploadPaymentReceipt(deliveryId, {
+        receiptUrl,
+        paymentMethod,
+        paymentStatus,
+        userId: customerId,
+      });
+
+      sendSuccess({
+        res,
+        message: 'Payment receipt uploaded successfully and submitted for verification.',
+        data: updated,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
 }

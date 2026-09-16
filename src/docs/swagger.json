@@ -23,146 +23,692 @@
     "schemas": {
       "CustomerRegister": {
         "type": "object",
-        "required": ["fullName", "phoneNumber", "password"],
+        "required": [
+          "fullName",
+          "phoneNumber",
+          "password"
+        ],
         "properties": {
-          "fullName": { "type": "string", "example": "Abebe Bikila" },
-          "phoneNumber": { "type": "string", "example": "+251911223344" },
-          "email": { "type": "string", "example": "abebe@example.com" },
-          "password": { "type": "string", "example": "CustomerPass@123" },
-          "address": { "type": "string", "example": "Bole, Addis Ababa" }
+          "fullName": {
+            "type": "string",
+            "example": "Abebe Bikila"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "example": "+251911223344"
+          },
+          "email": {
+            "type": "string",
+            "example": "abebe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "CustomerPass@123"
+          },
+          "address": {
+            "type": "string",
+            "example": "Bole, Addis Ababa"
+          }
         }
       },
       "CustomerLogin": {
         "type": "object",
-        "required": ["identifier", "password"],
+        "required": [
+          "identifier",
+          "password"
+        ],
         "properties": {
-          "identifier": { "type": "string", "example": "+251911223344", "description": "Phone number OR Email" },
-          "password": { "type": "string", "example": "CustomerPass@123" }
+          "identifier": {
+            "type": "string",
+            "example": "+251911223344",
+            "description": "Phone number OR Email"
+          },
+          "password": {
+            "type": "string",
+            "example": "CustomerPass@123"
+          }
         }
       },
       "RiderRegister": {
         "type": "object",
-        "required": ["fullName", "email", "phoneNumber", "password"],
+        "required": [
+          "fullName",
+          "email",
+          "phoneNumber",
+          "password"
+        ],
         "properties": {
-          "fullName": { "type": "string", "example": "Kebede Michael" },
-          "email": { "type": "string", "example": "kebede@rider.com" },
-          "phoneNumber": { "type": "string", "example": "+251922334455" },
-          "password": { "type": "string", "example": "RiderPass@123" },
-          "vehicleInfo": { "type": "string", "example": "TVS Motorcycle Plate AA-2-4592" }
+          "fullName": {
+            "type": "string",
+            "example": "Kebede Michael"
+          },
+          "email": {
+            "type": "string",
+            "example": "kebede@rider.com"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "example": "+251922334455"
+          },
+          "password": {
+            "type": "string",
+            "example": "RiderPass@123"
+          },
+          "vehicleInfo": {
+            "type": "string",
+            "example": "TVS Motorcycle Plate AA-2-4592"
+          }
         }
       },
       "RiderLogin": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
-          "email": { "type": "string", "example": "kebede@rider.com" },
-          "password": { "type": "string", "example": "RiderPass@123" }
+          "email": {
+            "type": "string",
+            "example": "kebede@rider.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "RiderPass@123"
+          }
         }
       },
       "AdminLogin": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
-          "email": { "type": "string", "example": "admin@balera.com" },
-          "password": { "type": "string", "example": "AdminPassword@123" }
+          "email": {
+            "type": "string",
+            "example": "admin@balera.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "AdminPassword@123"
+          }
         }
       },
       "ChangePassword": {
         "type": "object",
-        "required": ["currentPassword", "newPassword"],
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
         "properties": {
-          "currentPassword": { "type": "string", "example": "OldPassword@123" },
-          "newPassword": { "type": "string", "example": "NewPassword@123" }
+          "currentPassword": {
+            "type": "string",
+            "example": "OldPassword@123"
+          },
+          "newPassword": {
+            "type": "string",
+            "example": "NewPassword@123"
+          }
         }
       },
       "UpdateFcmToken": {
         "type": "object",
-        "required": ["fcmToken"],
+        "required": [
+          "fcmToken"
+        ],
         "properties": {
-          "fcmToken": { "type": "string", "example": "dK4X0a91-B7y:APA91bFw3..." }
+          "fcmToken": {
+            "type": "string",
+            "example": "dK4X0a91-B7y:APA91bFw3..."
+          }
         }
       },
       "UpdateRiderLocation": {
         "type": "object",
-        "required": ["latitude", "longitude"],
+        "required": [
+          "latitude",
+          "longitude"
+        ],
         "properties": {
-          "latitude": { "type": "number", "example": 9.0105, "description": "Rider GPS Latitude (-90 to 90)" },
-          "longitude": { "type": "number", "example": 38.7612, "description": "Rider GPS Longitude (-180 to 180)" },
-          "heading": { "type": "number", "example": 120.5, "description": "Compass heading degrees (optional)" }
+          "latitude": {
+            "type": "number",
+            "example": 9.0105,
+            "description": "Rider GPS Latitude (-90 to 90)"
+          },
+          "longitude": {
+            "type": "number",
+            "example": 38.7612,
+            "description": "Rider GPS Longitude (-180 to 180)"
+          },
+          "heading": {
+            "type": "number",
+            "example": 120.5,
+            "description": "Compass heading degrees (optional)"
+          }
         }
       },
       "CreateDelivery": {
         "type": "object",
-        "required": ["pickupLocation", "destination", "itemType", "itemDescription", "receiverName", "receiverPhone"],
+        "required": [
+          "pickupLocation",
+          "destination",
+          "itemType",
+          "itemDescription",
+          "receiverName",
+          "receiverPhone"
+        ],
         "properties": {
-          "pickupLocation": { "type": "string", "example": "Meskel Square, Addis Ababa" },
-          "pickupLatitude": { "type": "number", "example": 9.0105 },
-          "pickupLongitude": { "type": "number", "example": 38.7612 },
-          "destination": { "type": "string", "example": "CMC Michael, Addis Ababa" },
-          "destinationLatitude": { "type": "number", "example": 9.0234 },
-          "destinationLongitude": { "type": "number", "example": 38.8251 },
-          "itemType": { "type": "string", "example": "Documents" },
-          "itemDescription": { "type": "string", "example": "Urgent contract envelope" },
-          "receiverName": { "type": "string", "example": "Tigist Haile" },
-          "receiverPhone": { "type": "string", "example": "+251933445566" },
-          "specialInstructions": { "type": "string", "example": "Call 10 minutes before arrival" }
+          "pickupLocation": {
+            "type": "string",
+            "example": "Meskel Square, Addis Ababa"
+          },
+          "pickupLatitude": {
+            "type": "number",
+            "example": 9.0105
+          },
+          "pickupLongitude": {
+            "type": "number",
+            "example": 38.7612
+          },
+          "destination": {
+            "type": "string",
+            "example": "CMC Michael, Addis Ababa"
+          },
+          "destinationLatitude": {
+            "type": "number",
+            "example": 9.0234
+          },
+          "destinationLongitude": {
+            "type": "number",
+            "example": 38.8251
+          },
+          "itemType": {
+            "type": "string",
+            "example": "Documents"
+          },
+          "itemDescription": {
+            "type": "string",
+            "example": "Urgent contract envelope"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Tigist Haile"
+          },
+          "receiverPhone": {
+            "type": "string",
+            "example": "+251933445566"
+          },
+          "specialInstructions": {
+            "type": "string",
+            "example": "Call 10 minutes before arrival"
+          }
         }
       },
       "VerifyOtp": {
         "type": "object",
-        "required": ["otpCode"],
+        "required": [
+          "otpCode"
+        ],
         "properties": {
-          "otpCode": { "type": "string", "example": "482910", "description": "6-digit OTP code" }
+          "otpCode": {
+            "type": "string",
+            "example": "482910",
+            "description": "6-digit OTP code"
+          }
         }
       },
       "UpdateDeliveryStatus": {
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ACCEPTED", "ARRIVED_AT_PICKUP", "PICKED_UP", "ON_THE_WAY", "DELIVERED"]
+            "enum": [
+              "ACCEPTED",
+              "ARRIVED_AT_PICKUP",
+              "PICKED_UP",
+              "ON_THE_WAY",
+              "DELIVERED"
+            ]
           },
-          "notes": { "type": "string", "example": "Arrived at pickup location" }
+          "notes": {
+            "type": "string",
+            "example": "Arrived at pickup location"
+          }
         }
       },
       "RiderAvailability": {
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "properties": {
-          "status": { "type": "string", "enum": ["ONLINE", "OFFLINE"] }
+          "status": {
+            "type": "string",
+            "enum": [
+              "ONLINE",
+              "OFFLINE"
+            ]
+          }
         }
       },
       "AssignRider": {
         "type": "object",
-        "required": ["riderId"],
+        "required": [
+          "riderId"
+        ],
         "properties": {
-          "riderId": { "type": "string", "format": "uuid" }
+          "riderId": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "UpdateStatus": {
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "properties": {
-          "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] }
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED"
+            ]
+          }
         }
       },
       "SendNotification": {
         "type": "object",
-        "required": ["targetRole", "title", "message"],
+        "required": [
+          "targetRole",
+          "title",
+          "message"
+        ],
         "properties": {
-          "targetRole": { "type": "string", "enum": ["ALL", "CUSTOMER", "RIDER", "ADMIN"] },
-          "targetUserId": { "type": "string", "format": "uuid", "description": "Optional: Specific user ID to target" },
-          "title": { "type": "string", "example": "Platform Notice" },
-          "message": { "type": "string", "example": "Rain in Addis Ababa, drive safely." }
+          "targetRole": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "CUSTOMER",
+              "RIDER",
+              "ADMIN"
+            ]
+          },
+          "targetUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional: Specific user ID to target"
+          },
+          "title": {
+            "type": "string",
+            "example": "Platform Notice"
+          },
+          "message": {
+            "type": "string",
+            "example": "Rain in Addis Ababa, drive safely."
+          }
         }
       },
       "SystemSetting": {
         "type": "object",
-        "required": ["key", "value"],
+        "required": [
+          "key",
+          "value"
+        ],
         "properties": {
-          "key": { "type": "string", "example": "base_delivery_fee" },
-          "value": { "type": "string", "example": "120" }
+          "key": {
+            "type": "string",
+            "example": "base_delivery_fee"
+          },
+          "value": {
+            "type": "string",
+            "example": "120"
+          }
+        }
+      },
+      "CreateRestaurant": {
+        "type": "object",
+        "required": [
+          "name",
+          "address"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Green Caffee Restaurant"
+          },
+          "code": {
+            "type": "string",
+            "example": "HTL-001"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Green Coffee",
+              "Green Cafe"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "example": "Cafe & Restaurant"
+          },
+          "cuisineType": {
+            "type": "string",
+            "example": "Traditional & Meat Specialties"
+          },
+          "phone1": {
+            "type": "string",
+            "example": "+251911223344"
+          },
+          "phone2": {
+            "type": "string",
+            "example": "+251922334455"
+          },
+          "address": {
+            "type": "string",
+            "example": "Main Commercial Ave, Bale Robe, Ethiopia"
+          },
+          "latitude": {
+            "type": "number",
+            "example": 7.0083
+          },
+          "longitude": {
+            "type": "number",
+            "example": 39.9833
+          },
+          "rating": {
+            "type": "number",
+            "example": 4.8
+          },
+          "totalReviews": {
+            "type": "integer",
+            "example": 124
+          },
+          "deliveryTime": {
+            "type": "string",
+            "example": "20 - 35 min"
+          },
+          "deliveryFee": {
+            "type": "number",
+            "example": 60
+          },
+          "priceRange": {
+            "type": "string",
+            "example": "$$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Active",
+              "Inactive"
+            ],
+            "example": "Active"
+          },
+          "openingHours": {
+            "type": "string",
+            "example": "06:30 AM - 10:00 PM"
+          },
+          "isPartner": {
+            "type": "boolean",
+            "example": true
+          },
+          "banner": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800"
+          },
+          "avatar": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200"
+          }
+        }
+      },
+      "UpdateRestaurant": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Green Caffee Restaurant"
+          },
+          "category": {
+            "type": "string",
+            "example": "Cafe & Restaurant"
+          },
+          "cuisineType": {
+            "type": "string",
+            "example": "Traditional & Meat Specialties"
+          },
+          "phone1": {
+            "type": "string",
+            "example": "+251911223344"
+          },
+          "phone2": {
+            "type": "string",
+            "example": "+251922334455"
+          },
+          "address": {
+            "type": "string",
+            "example": "Main Commercial Ave, Bale Robe, Ethiopia"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Active",
+              "Inactive"
+            ]
+          },
+          "openingHours": {
+            "type": "string",
+            "example": "06:30 AM - 10:00 PM"
+          },
+          "deliveryFee": {
+            "type": "number",
+            "example": 60
+          },
+          "deliveryTime": {
+            "type": "string",
+            "example": "20 - 35 min"
+          },
+          "banner": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateRestaurantPhones": {
+        "type": "object",
+        "properties": {
+          "phone1": {
+            "type": "string",
+            "example": "+251911223344"
+          },
+          "phone2": {
+            "type": "string",
+            "example": "+251922334455"
+          }
+        }
+      },
+      "UpdateRestaurantStatus": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "Active",
+              "Inactive"
+            ],
+            "example": "Active"
+          }
+        }
+      },
+      "CreateFoodItem": {
+        "type": "object",
+        "required": [
+          "name",
+          "price"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Half Haniid ½"
+          },
+          "code": {
+            "type": "string",
+            "example": "FOOD-001-1"
+          },
+          "category": {
+            "type": "string",
+            "example": "Haniid & Roasts"
+          },
+          "price": {
+            "type": "number",
+            "example": 1200
+          },
+          "description": {
+            "type": "string",
+            "example": "Tender slow-roasted half lamb seasoned with authentic Ethiopian spices."
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "example": true
+          },
+          "tag": {
+            "type": "string",
+            "example": "Popular"
+          },
+          "image": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1544025162-d76694265947?w=400"
+          }
+        }
+      },
+      "UpdateFoodItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Half Haniid ½"
+          },
+          "category": {
+            "type": "string",
+            "example": "Haniid & Roasts"
+          },
+          "price": {
+            "type": "number",
+            "example": 1200
+          },
+          "description": {
+            "type": "string"
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "example": true
+          },
+          "tag": {
+            "type": "string",
+            "example": "Popular"
+          },
+          "image": {
+            "type": "string"
+          }
+        }
+      },
+      "ToggleFoodAvailability": {
+        "type": "object",
+        "properties": {
+          "isAvailable": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "CreateFoodOrder": {
+        "type": "object",
+        "required": [
+          "restaurantId",
+          "items",
+          "destination",
+          "receiverName",
+          "receiverPhone"
+        ],
+        "properties": {
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c0a80123-4567-89ab-cdef-0123456789ab"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "price",
+                "quantity"
+              ],
+              "properties": {
+                "foodItemId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "example": "Half Haniid ½"
+                },
+                "price": {
+                  "type": "number",
+                  "example": 1200
+                },
+                "quantity": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "notes": {
+                  "type": "string",
+                  "example": "Extra chili sauce on the side"
+                }
+              }
+            }
+          },
+          "destination": {
+            "type": "string",
+            "example": "Madda Walabu University Campus, Bale Robe"
+          },
+          "destinationLatitude": {
+            "type": "number",
+            "example": 7.0125
+          },
+          "destinationLongitude": {
+            "type": "number",
+            "example": 39.9789
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Ahmed Ali"
+          },
+          "receiverPhone": {
+            "type": "string",
+            "example": "+251911998877"
+          },
+          "specialInstructions": {
+            "type": "string",
+            "example": "Call upon arrival at the gate"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "example": "CASH_ON_DELIVERY"
+          }
         }
       }
     }
@@ -170,694 +716,2510 @@
   "paths": {
     "/api/v1/auth/register": {
       "post": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Register a new Customer (Immediate Active)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerRegister" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerRegister"
+              }
+            }
+          }
         },
-        "responses": { "201": { "description": "Customer registered successfully" } }
+        "responses": {
+          "201": {
+            "description": "Customer registered successfully"
+          }
+        }
       }
     },
     "/api/v1/auth/login": {
       "post": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Customer Login (Phone or Email + Password)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerLogin" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerLogin"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Login successful, returns JWT token" } }
+        "responses": {
+          "200": {
+            "description": "Login successful, returns JWT token"
+          }
+        }
       }
     },
     "/api/v1/auth/rider/register": {
       "post": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Rider Self-Registration (Account status starts as PENDING_APPROVAL)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RiderRegister" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiderRegister"
+              }
+            }
+          }
         },
-        "responses": { "201": { "description": "Registration submitted for admin review" } }
+        "responses": {
+          "201": {
+            "description": "Registration submitted for admin review"
+          }
+        }
       }
     },
     "/api/v1/auth/rider/login": {
       "post": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Rider Login (Email + Password, blocked if pending approval)",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RiderLogin" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiderLogin"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Rider login successful" } }
+        "responses": {
+          "200": {
+            "description": "Rider login successful"
+          }
+        }
       }
     },
     "/api/v1/auth/admin/login": {
       "post": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Admin Login",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminLogin" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLogin"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Admin login successful" } }
+        "responses": {
+          "200": {
+            "description": "Admin login successful"
+          }
+        }
       }
     },
     "/api/v1/auth/me": {
       "get": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Get Current Authenticated User Profile",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "User profile" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile"
+          }
+        }
       }
     },
     "/api/v1/auth/change-password": {
       "put": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Change User Password",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChangePassword" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Password updated successfully" } }
+        "responses": {
+          "200": {
+            "description": "Password updated successfully"
+          }
+        }
       }
     },
     "/api/v1/auth/fcm-token": {
       "put": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Register/Update Mobile Firebase Device Push Token",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateFcmToken" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFcmToken"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "FCM device token saved" } }
+        "responses": {
+          "200": {
+            "description": "FCM device token saved"
+          }
+        }
       }
     },
     "/api/v1/auth/logout": {
       "post": {
-        "tags": ["1. Authentication"],
+        "tags": [
+          "1. Authentication"
+        ],
         "summary": "Logout current session",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Logged out successfully" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out successfully"
+          }
+        }
       }
     },
     "/api/v1/customer/deliveries": {
       "post": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "Create Delivery Request (with GPS Coordinates & 6-Digit OTP)",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateDelivery" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDelivery"
+              }
+            }
+          }
         },
-        "responses": { "201": { "description": "Delivery created with 6-digit OTP" } }
+        "responses": {
+          "201": {
+            "description": "Delivery created with 6-digit OTP"
+          }
+        }
       },
       "get": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
-        "summary": "List Customer's Deliveries (Filter by status, search, pagination)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "status", "in": "query", "schema": { "type": "string" } },
-          { "name": "search", "in": "query", "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
         ],
-        "responses": { "200": { "description": "List of deliveries" } }
+        "summary": "List Customer's Deliveries (Filter by status, search, pagination)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of deliveries"
+          }
+        }
       }
     },
     "/api/v1/customer/deliveries/{id}": {
       "get": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "Get Delivery Details & Current Status",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Delivery details" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery details"
+          }
+        }
       }
     },
     "/api/v1/customer/deliveries/{id}/track": {
       "get": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "🗺️ Live Map Tracking: View Delivery Pins & Moving Rider GPS Location",
         "description": "Returns pickup coordinates, destination coordinates, and the assigned rider's real-time latitude/longitude to display a live moving marker on the customer's Google Map.",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Real-time delivery route and rider GPS position" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Real-time delivery route and rider GPS position"
+          }
+        }
       }
     },
     "/api/v1/customer/deliveries/{id}/otp": {
       "get": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "View 6-Digit Completion OTP (Customer shows this to Rider upon dropoff)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "OTP details" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OTP details"
+          }
+        }
       }
     },
     "/api/v1/customer/deliveries/{id}/cancel": {
       "post": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "Cancel Delivery Request (Pending or uncollected)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": { "reason": { "type": "string", "example": "Changed my mind" } }
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "example": "Changed my mind"
+                  }
+                }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Delivery cancelled" } }
+        "responses": {
+          "200": {
+            "description": "Delivery cancelled"
+          }
+        }
       }
     },
     "/api/v1/customer/profile": {
       "get": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "Get Customer Profile",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Profile loaded" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile loaded"
+          }
+        }
       },
       "put": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
+        ],
         "summary": "Update Customer Profile",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "fullName": { "type": "string" },
-                  "phoneNumber": { "type": "string" },
-                  "email": { "type": "string" },
-                  "address": { "type": "string" }
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "phoneNumber": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Profile updated" } }
+        "responses": {
+          "200": {
+            "description": "Profile updated"
+          }
+        }
       }
     },
     "/api/v1/customer/notifications": {
       "get": {
-        "tags": ["2. Customer Deliveries & Live Tracking"],
-        "summary": "Get Customer Notifications Feed (Bell Icon 🔔)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "2. Customer Deliveries & Live Tracking"
         ],
-        "responses": { "200": { "description": "Customer notifications" } }
+        "summary": "Get Customer Notifications Feed (Bell Icon 🔔)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer notifications"
+          }
+        }
       }
     },
     "/api/v1/rider/location": {
       "put": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "🛰️ Send Rider GPS Coordinates (Called periodically every 5-10s)",
         "description": "Rider mobile app transmits current latitude, longitude, and compass heading. Used by backend for nearest-rider dispatch and customer live map tracking.",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateRiderLocation" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRiderLocation"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Rider GPS coordinates updated successfully" } }
+        "responses": {
+          "200": {
+            "description": "Rider GPS coordinates updated successfully"
+          }
+        }
       }
     },
     "/api/v1/rider/status": {
       "put": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Toggle Rider Availability (ONLINE / OFFLINE)",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RiderAvailability" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiderAvailability"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Availability updated" } }
+        "responses": {
+          "200": {
+            "description": "Availability updated"
+          }
+        }
       }
     },
     "/api/v1/rider/assigned": {
       "get": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "View Assigned Deliveries Awaiting Acceptance or In Progress",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Assigned deliveries" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assigned deliveries"
+          }
+        }
       }
     },
     "/api/v1/rider/active": {
       "get": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Get Current Active Ongoing Delivery",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Active delivery" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active delivery"
+          }
+        }
       }
     },
     "/api/v1/rider/deliveries/{id}/accept": {
       "post": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Accept Delivery Assignment",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Delivery accepted" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery accepted"
+          }
+        }
       }
     },
     "/api/v1/rider/deliveries/{id}/reject": {
       "post": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Reject Delivery Assignment (Returns order to PENDING)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": { "reason": { "type": "string", "example": "Motorcycle maintenance" } }
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "example": "Motorcycle maintenance"
+                  }
+                }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Delivery rejected" } }
+        "responses": {
+          "200": {
+            "description": "Delivery rejected"
+          }
+        }
       }
     },
     "/api/v1/rider/deliveries/{id}/status": {
       "put": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Update Delivery Progress Status",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateDeliveryStatus" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeliveryStatus"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Status updated" } }
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
       }
     },
     "/api/v1/rider/deliveries/{id}/verify-otp": {
       "post": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Verify 6-Digit Recipient OTP & Complete Delivery (DELIVERED -> COMPLETED)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerifyOtp" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtp"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "OTP verified, delivery completed" } }
+        "responses": {
+          "200": {
+            "description": "OTP verified, delivery completed"
+          }
+        }
       }
     },
     "/api/v1/rider/history": {
       "get": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
-        "summary": "View Rider's Completed Deliveries History",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
         ],
-        "responses": { "200": { "description": "Delivery history" } }
+        "summary": "View Rider's Completed Deliveries History",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery history"
+          }
+        }
       }
     },
     "/api/v1/rider/profile": {
       "get": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Get Rider Profile",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Profile details" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile details"
+          }
+        }
       },
       "put": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
+        ],
         "summary": "Update Rider Profile",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "fullName": { "type": "string" },
-                  "phoneNumber": { "type": "string" },
-                  "vehicleInfo": { "type": "string" }
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "phoneNumber": {
+                    "type": "string"
+                  },
+                  "vehicleInfo": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Profile updated" } }
+        "responses": {
+          "200": {
+            "description": "Profile updated"
+          }
+        }
       }
     },
     "/api/v1/rider/notifications": {
       "get": {
-        "tags": ["3. Rider Operations & GPS Tracking"],
-        "summary": "Get Rider Notifications Feed (Bell Icon 🔔)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "3. Rider Operations & GPS Tracking"
         ],
-        "responses": { "200": { "description": "Rider notifications" } }
+        "summary": "Get Rider Notifications Feed (Bell Icon 🔔)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rider notifications"
+          }
+        }
       }
     },
     "/api/v1/admin/dashboard": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Get Real-time System Metrics & Summary",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Dashboard overview statistics" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard overview statistics"
+          }
+        }
       }
     },
     "/api/v1/admin/map/live": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "🗺️ Live Fleet City Map: Real-time Riders & Active Delivery Pins",
         "description": "Returns all online riders with their live GPS positions, active order count, and all pending/in-progress delivery pins for the dashboard city map.",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Live map fleet data" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live map fleet data"
+          }
+        }
       }
     },
     "/api/v1/admin/riders/nearby": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "📍 Proximity Dispatch: Find Closest Online Riders to Pickup Point",
         "description": "Calculates distance in kilometers between the order pickup location and all online riders using Haversine algorithm, returning riders sorted from closest to farthest.",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "deliveryId", "in": "query", "schema": { "type": "string" }, "description": "Optional: Automatically fetch pickup coordinates from delivery ID" },
-          { "name": "pickupLat", "in": "query", "schema": { "type": "number" }, "description": "Pickup Latitude" },
-          { "name": "pickupLng", "in": "query", "schema": { "type": "number" }, "description": "Pickup Longitude" },
-          { "name": "radiusKm", "in": "query", "schema": { "type": "number", "default": 50 }, "description": "Search radius in km" }
+        "security": [
+          {
+            "BearerAuth": []
+          }
         ],
-        "responses": { "200": { "description": "Sorted nearest online riders" } }
+        "parameters": [
+          {
+            "name": "deliveryId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional: Automatically fetch pickup coordinates from delivery ID"
+          },
+          {
+            "name": "pickupLat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Pickup Latitude"
+          },
+          {
+            "name": "pickupLng",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Pickup Longitude"
+          },
+          {
+            "name": "radiusKm",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "default": 50
+            },
+            "description": "Search radius in km"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sorted nearest online riders"
+          }
+        }
       }
     },
     "/api/v1/admin/customers": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
-        "summary": "Search & List All Customers",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "search", "in": "query", "schema": { "type": "string" } },
-          { "name": "status", "in": "query", "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
         ],
-        "responses": { "200": { "description": "Customers list" } }
+        "summary": "Search & List All Customers",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customers list"
+          }
+        }
       },
       "post": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Admin Direct Customer Registration",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerRegister" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerRegister"
+              }
+            }
+          }
         },
-        "responses": { "201": { "description": "Customer account created" } }
+        "responses": {
+          "201": {
+            "description": "Customer account created"
+          }
+        }
       }
     },
     "/api/v1/admin/customers/{id}": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Get Customer Details & Entire Order History",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Customer details" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer details"
+          }
+        }
       },
       "put": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Update Customer Information",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Customer updated" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer updated"
+          }
+        }
       }
     },
     "/api/v1/admin/customers/{id}/status": {
       "patch": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Suspend or Reactivate Customer Account",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["status"],
-                "properties": { "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] } }
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "SUSPENDED"
+                    ]
+                  }
+                }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Customer status updated" } }
+        "responses": {
+          "200": {
+            "description": "Customer status updated"
+          }
+        }
       }
     },
     "/api/v1/admin/riders": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
-        "summary": "Search & List Riders (Filter by online/offline/pending/active)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "search", "in": "query", "schema": { "type": "string" } },
-          { "name": "accountStatus", "in": "query", "schema": { "type": "string" } },
-          { "name": "availabilityStatus", "in": "query", "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
         ],
-        "responses": { "200": { "description": "Riders list" } }
+        "summary": "Search & List Riders (Filter by online/offline/pending/active)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountStatus",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "availabilityStatus",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Riders list"
+          }
+        }
       },
       "post": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Admin Direct Rider Registration (Auto-approved)",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RiderRegister" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiderRegister"
+              }
+            }
+          }
         },
-        "responses": { "201": { "description": "Rider registered" } }
+        "responses": {
+          "201": {
+            "description": "Rider registered"
+          }
+        }
       }
     },
     "/api/v1/admin/riders/{id}": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Get Rider Details, Active Tasks & Performance Stats",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Rider details" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rider details"
+          }
+        }
       },
       "put": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Update Rider Information",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Rider updated" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rider updated"
+          }
+        }
       }
     },
     "/api/v1/admin/riders/{id}/approve": {
       "patch": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Approve Pending Rider Application (Switches to ACTIVE)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Rider approved successfully" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rider approved successfully"
+          }
+        }
       }
     },
     "/api/v1/admin/riders/{id}/status": {
       "patch": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Suspend or Reactivate Rider Account",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["status"],
-                "properties": { "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] } }
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "SUSPENDED"
+                    ]
+                  }
+                }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Rider status updated" } }
+        "responses": {
+          "200": {
+            "description": "Rider status updated"
+          }
+        }
       }
     },
     "/api/v1/admin/deliveries": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
-        "summary": "List & Filter All Platform Deliveries",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "status", "in": "query", "schema": { "type": "string" } },
-          { "name": "search", "in": "query", "schema": { "type": "string" } },
-          { "name": "customerId", "in": "query", "schema": { "type": "string" } },
-          { "name": "riderId", "in": "query", "schema": { "type": "string" } },
-          { "name": "startDate", "in": "query", "schema": { "type": "string" } },
-          { "name": "endDate", "in": "query", "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
         ],
-        "responses": { "200": { "description": "Deliveries list" } }
+        "summary": "List & Filter All Platform Deliveries",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "riderId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deliveries list"
+          }
+        }
       }
     },
     "/api/v1/admin/deliveries/{id}": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Get Complete Delivery Details & Step-by-Step Status Audit Trail",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Delivery details" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery details"
+          }
+        }
       }
     },
     "/api/v1/admin/deliveries/{id}/assign": {
       "put": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Assign Delivery to Online Rider",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignRider" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRider"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Rider assigned" } }
+        "responses": {
+          "200": {
+            "description": "Rider assigned"
+          }
+        }
       }
     },
     "/api/v1/admin/deliveries/{id}/reassign": {
       "put": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Reassign Delivery to Another Online Rider",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignRider" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRider"
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Rider reassigned" } }
+        "responses": {
+          "200": {
+            "description": "Rider reassigned"
+          }
+        }
       }
     },
     "/api/v1/admin/deliveries/{id}/cancel": {
       "post": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Cancel Delivery by Admin",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": { "reason": { "type": "string", "example": "Customer requested via phone" } }
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "example": "Customer requested via phone"
+                  }
+                }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Delivery cancelled" } }
+        "responses": {
+          "200": {
+            "description": "Delivery cancelled"
+          }
+        }
       }
     },
     "/api/v1/admin/reports": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
-        "summary": "Generate Daily, Weekly, Monthly & Rider Performance Reports",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["daily", "weekly", "monthly", "all"] } }
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
         ],
-        "responses": { "200": { "description": "Operational statistics" } }
+        "summary": "Generate Daily, Weekly, Monthly & Rider Performance Reports",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operational statistics"
+          }
+        }
       }
     },
     "/api/v1/admin/settings": {
       "get": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Get Platform Settings",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "Platform settings" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Platform settings"
+          }
+        }
       },
       "put": {
-        "tags": ["4. Admin Dashboard & Fleet Operations"],
+        "tags": [
+          "4. Admin Dashboard & Fleet Operations"
+        ],
         "summary": "Update Platform Setting",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["key", "value"],
+                "required": [
+                  "key",
+                  "value"
+                ],
                 "properties": {
-                  "key": { "type": "string" },
-                  "value": { "type": "string" }
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Setting updated" } }
+        "responses": {
+          "200": {
+            "description": "Setting updated"
+          }
+        }
       }
     },
     "/api/v1/notifications": {
       "get": {
-        "tags": ["5. Notifications"],
-        "summary": "Get User Notifications Feed (Bell Icon 🔔)",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        "tags": [
+          "5. Notifications"
         ],
-        "responses": { "200": { "description": "Notifications retrieved" } }
+        "summary": "Get User Notifications Feed (Bell Icon 🔔)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications retrieved"
+          }
+        }
       }
     },
     "/api/v1/notifications/{id}/read": {
       "put": {
-        "tags": ["5. Notifications"],
+        "tags": [
+          "5. Notifications"
+        ],
         "summary": "Mark Single Notification as Read",
-        "security": [{ "BearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Notification marked as read" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification marked as read"
+          }
+        }
       }
     },
     "/api/v1/notifications/read-all": {
       "put": {
-        "tags": ["5. Notifications"],
+        "tags": [
+          "5. Notifications"
+        ],
         "summary": "Mark All Notifications as Read",
-        "security": [{ "BearerAuth": [] }],
-        "responses": { "200": { "description": "All notifications marked as read" } }
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read"
+          }
+        }
       }
     },
     "/api/v1/notifications/send": {
       "post": {
-        "tags": ["5. Notifications"],
+        "tags": [
+          "5. Notifications"
+        ],
         "summary": "Admin Send Broadcast or Targeted Notification",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["targetRole", "title", "message"],
+                "required": [
+                  "targetRole",
+                  "title",
+                  "message"
+                ],
                 "properties": {
-                  "targetRole": { "type": "string", "enum": ["ALL", "CUSTOMER", "RIDER", "ADMIN"] },
-                  "targetUserId": { "type": "string", "format": "uuid" },
-                  "title": { "type": "string" },
-                  "message": { "type": "string" }
+                  "targetRole": {
+                    "type": "string",
+                    "enum": [
+                      "ALL",
+                      "CUSTOMER",
+                      "RIDER",
+                      "ADMIN"
+                    ]
+                  },
+                  "targetUserId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Notification sent" } }
+        "responses": {
+          "200": {
+            "description": "Notification sent"
+          }
+        }
       }
     },
     "/api/v1/health": {
       "get": {
-        "tags": ["6. Health Check"],
+        "tags": [
+          "6. Health Check"
+        ],
         "summary": "API Health Check",
-        "responses": { "200": { "description": "Server is operational" } }
+        "responses": {
+          "200": {
+            "description": "Server is operational"
+          }
+        }
+      }
+    },
+    "/api/v1/restaurants": {
+      "get": {
+        "tags": [
+          "Customer - Restaurants & Menus"
+        ],
+        "summary": "Public / Customer: List active restaurants & cafes",
+        "description": "Get all active partner establishments in Bale Robe with rating, delivery fee, delivery time, and preview dishes.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by restaurant name, address, or cuisine"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by category (e.g. Traditional Restaurant, Fast Food, Cafe)"
+          },
+          {
+            "name": "cuisineType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by cuisine specialties"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active partner restaurants loaded successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/restaurants/{id}": {
+      "get": {
+        "tags": [
+          "Customer - Restaurants & Menus"
+        ],
+        "summary": "Public / Customer: Get restaurant profile and categorized food menu",
+        "description": "Retrieve full details of a restaurant and its menu grouped by food category for customer ordering.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restaurant UUID or Code (e.g. HTL-001)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restaurant menu loaded"
+          },
+          "404": {
+            "description": "Restaurant not found or inactive"
+          }
+        }
+      }
+    },
+    "/api/v1/foods": {
+      "get": {
+        "tags": [
+          "Customer - Restaurants & Menus"
+        ],
+        "summary": "Public / Customer: Search & explore master food dishes",
+        "description": "Search across all food dishes across all restaurants with filters for price and availability.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dish name, description, ingredients, or tag"
+          },
+          {
+            "name": "restaurantId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by restaurant ID or code"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by dish category"
+          },
+          {
+            "name": "isAvailable",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter in-stock items only"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dishes list retrieved"
+          }
+        }
+      }
+    },
+    "/api/v1/customer/orders": {
+      "post": {
+        "tags": [
+          "Customer - Food Ordering"
+        ],
+        "summary": "Customer: Place a Food Delivery Order",
+        "description": "Create a new food delivery order with items, quantities, delivery destination, and receiver details. Automatically creates the delivery request and OTP.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFoodOrder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Food order and delivery request created successfully with tracking code and OTP"
+          },
+          "400": {
+            "description": "Invalid order input or inactive restaurant"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Customer - Food Ordering"
+        ],
+        "summary": "Customer: Get my food orders history",
+        "description": "Retrieve all food orders placed by the authenticated customer with live delivery tracking and rider status.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer food orders retrieved"
+          }
+        }
+      }
+    },
+    "/api/v1/customer/orders/{id}": {
+      "get": {
+        "tags": [
+          "Customer - Food Ordering"
+        ],
+        "summary": "Customer: Get food order details & live tracking",
+        "description": "Get full food order breakdown, item quantities, delivery rider position, and 6-digit verification OTP.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Order UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Food order details retrieved"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/restaurants": {
+      "get": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: List all partner establishments with filters & statistics",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search hotel name, address, phone, or dish"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by category"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "All",
+                "Active",
+                "Inactive"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hotels and restaurants with KPI stats retrieved"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Register a new Hotel / Restaurant",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRestaurant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hotel registered successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/restaurants/{id}": {
+      "get": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Get complete hotel details and full food catalog",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Restaurant UUID or code"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restaurant profile and menu retrieved"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Update hotel profile details",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRestaurant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hotel updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Delete hotel and all its menu dishes",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hotel deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/restaurants/{id}/status": {
+      "patch": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Toggle or set hotel Active / Inactive status",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRestaurantStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hotel status updated"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/restaurants/{id}/phones": {
+      "patch": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Quick update hotel contact phone numbers",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRestaurantPhones"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hotel phones updated"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/restaurants/{id}/foods": {
+      "post": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Add a new food dish to hotel menu",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFoodItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Food dish added"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/foods": {
+      "get": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Master dishes catalog across all establishments",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "restaurantId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isAvailable",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Master foods list retrieved"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/foods/{foodId}": {
+      "put": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Update food dish details & pricing",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "foodId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFoodItem"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Food dish updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Delete food dish",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "foodId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Food dish deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/foods/{foodId}/availability": {
+      "patch": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Toggle dish In-Stock / Out-of-Stock availability",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "foodId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFoodAvailability"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Food availability toggled"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/restaurants/seed-defaults": {
+      "post": {
+        "tags": [
+          "Admin - Hotels & Restaurants"
+        ],
+        "summary": "Admin: Seed / Sync all default Bale Robe partner establishments & menus",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "force",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default restaurants seeded into database"
+          }
+        }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Admin - Hotels & Restaurants",
+      "description": "Partner establishments and food menu catalog management"
+    },
+    {
+      "name": "Customer - Restaurants & Menus",
+      "description": "Public restaurant discovery and full food menu browsing"
+    },
+    {
+      "name": "Customer - Food Ordering",
+      "description": "Food delivery order placement and live tracking"
+    }
+  ]
 }

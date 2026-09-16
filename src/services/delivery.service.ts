@@ -8,6 +8,7 @@ import { DeliveryStatus } from '@prisma/client';
 export class DeliveryService {
   /**
    * Create a new delivery request (by Customer)
+   * Supports both regular parcel/custom items AND food/restaurant orders with full menu items
    */
   static async createDelivery(customerId: string, data: {
     pickupLocation: string;
@@ -21,30 +22,114 @@ export class DeliveryService {
     receiverName: string;
     receiverPhone: string;
     specialInstructions?: string;
+    restaurantId?: string;
+    hotelId?: string;
+    items?: Array<{
+      foodItemId?: string;
+      name: string;
+      price?: number;
+      quantity?: number;
+      notes?: string;
+    }>;
+    paymentMethod?: string;
+    paymentStatus?: string;
+    receiptUrl?: string;
   }) {
     const trackingCode = generateTrackingCode();
+
+    // If restaurant identifier is passed, find matching restaurant
+    const targetRestaurantId = data.restaurantId || data.hotelId;
+    let restaurant: any = null;
+    if (targetRestaurantId) {
+      restaurant = await prisma.restaurant.findFirst({
+        where: {
+          OR: [
+            { id: targetRestaurantId },
+            { code: targetRestaurantId },
+            { name: { contains: targetRestaurantId, mode: 'insensitive' } },
+          ],
+        },
+      });
+    }
+
+    // Auto-detect restaurant by name if not explicitly passed
+    if (!restaurant) {
+      const allRestaurants = await prisma.restaurant.findMany();
+      const combinedText = `${data.pickupLocation || ''} ${data.itemDescription || ''} ${data.itemType || ''}`.toLowerCase();
+      restaurant = allRestaurants.find(r => 
+        combinedText.includes(r.name.toLowerCase()) || 
+        (r.aliases && r.aliases.some(a => combinedText.includes(a.toLowerCase()))) ||
+        (r.code && combinedText.includes(r.code.toLowerCase()))
+      ) || null;
+    }
+
+    const isFood =
+      (data.itemType &&
+        (data.itemType.toLowerCase().includes('food') ||
+          data.itemType.toLowerCase().includes('restaurant') ||
+          data.itemType.toLowerCase().includes('meal'))) ||
+      !!restaurant ||
+      (Array.isArray(data.items) && data.items.length > 0);
+
+    // Determine pickup location and description
+    const pickupLocation = restaurant
+      ? `${restaurant.name}, ${restaurant.address}`
+      : data.pickupLocation;
+
+    let itemsToSave = Array.isArray(data.items) && data.items.length > 0 ? data.items : [];
+
+    // If items array was empty but itemDescription has dish text (e.g. "2x Faxiraa (600 Birr) - SANA'A RESTAURANT")
+    if (itemsToSave.length === 0 && data.itemDescription && isFood) {
+      const match = data.itemDescription.match(/(\d+)\s*x\s*([^(]+?)(?:\s*\((?:ETB\s*|Birr\s*)?(\d+(?:\.\d+)?)\s*(?:Birr|ETB)?\))?(?:\s*-\s*(.+))?$/i);
+      if (match) {
+        const qty = parseInt(match[1], 10) || 1;
+        const itemName = match[2].trim();
+        const rawTotal = match[3] ? parseFloat(match[3]) : 0;
+        const unitPrice = rawTotal > 0 ? (rawTotal / qty) : 250;
+        itemsToSave = [{
+          name: itemName,
+          price: unitPrice,
+          quantity: qty,
+          notes: ''
+        }];
+      }
+    }
+
+    let itemDescription = data.itemDescription;
+    if (isFood && restaurant && itemsToSave.length > 0) {
+      const summary = itemsToSave.map((it) => `${it.quantity || 1}x ${it.name}`).join(', ');
+      itemDescription = `Food Order from ${restaurant.name}: ${summary}`;
+    }
+
+    const paymentMethod = data.paymentMethod || (data.receiptUrl ? 'DIGITAL_TRANSFER' : 'TELEBIRR');
+    const paymentStatus = data.paymentStatus || (data.receiptUrl ? 'PAID_PENDING_VERIFICATION' : 'PENDING');
 
     const delivery = await prisma.delivery.create({
       data: {
         trackingCode,
         customerId,
-        pickupLocation: data.pickupLocation,
-        pickupLatitude: data.pickupLatitude || null,
-        pickupLongitude: data.pickupLongitude || null,
+        pickupLocation,
+        pickupLatitude: data.pickupLatitude || (restaurant ? restaurant.latitude : null),
+        pickupLongitude: data.pickupLongitude || (restaurant ? restaurant.longitude : null),
         destination: data.destination,
         destinationLatitude: data.destinationLatitude || null,
         destinationLongitude: data.destinationLongitude || null,
-        itemType: data.itemType,
-        itemDescription: data.itemDescription,
+        itemType: data.itemType || (isFood ? 'Food' : 'Package'),
+        itemDescription,
         receiverName: data.receiverName,
         receiverPhone: data.receiverPhone,
         specialInstructions: data.specialInstructions || null,
+        paymentMethod,
+        paymentStatus,
+        receiptUrl: data.receiptUrl || null,
         status: 'PENDING',
         statusLogs: {
           create: {
             status: 'PENDING',
             updatedBy: customerId,
-            notes: 'Delivery request created by customer.',
+            notes: isFood && restaurant
+              ? `Food order created for ${restaurant.name}.${data.receiptUrl ? ' Payment receipt uploaded.' : ''}`
+              : `Delivery request created by customer.${data.receiptUrl ? ' Payment receipt uploaded.' : ''}`,
           },
         },
       },
@@ -54,6 +139,50 @@ export class DeliveryService {
         },
       },
     });
+
+    // If food order items or restaurant is present, create linked Order
+    if (isFood && restaurant) {
+      let subtotal = 0;
+      const orderItemsData = itemsToSave.map((it) => {
+        const price = Number(it.price) || 0;
+        const qty = Number(it.quantity) || 1;
+        const itemSub = price * qty;
+        subtotal += itemSub;
+        return {
+          foodItemId: it.foodItemId || null,
+          name: it.name,
+          price,
+          quantity: qty,
+          subtotal: itemSub,
+          notes: it.notes || null,
+        };
+      });
+
+      const deliveryFee = restaurant.deliveryFee || 60;
+      const totalAmount = subtotal + deliveryFee;
+      const orderCount = await prisma.order.count();
+      const orderNumber = `ORD-${new Date().getFullYear()}-${String(orderCount + 1001).padStart(5, '0')}`;
+
+      await prisma.order.create({
+        data: {
+          orderNumber,
+          customerId,
+          restaurantId: restaurant.id,
+          deliveryId: delivery.id,
+          subtotal,
+          deliveryFee,
+          totalAmount,
+          status: 'PENDING',
+          paymentMethod,
+          paymentStatus,
+          receiptUrl: data.receiptUrl || null,
+          specialInstructions: data.specialInstructions || null,
+          items: {
+            create: orderItemsData,
+          },
+        },
+      });
+    }
 
     // Generate 6-digit OTP for delivery completion
     const otpCode = await OtpService.generateDeliveryOtp(delivery.id);
@@ -74,8 +203,11 @@ export class DeliveryService {
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
+    // Return complete delivery record
+    const completeDelivery = await this.getDeliveryById(delivery.id);
+
     return {
-      ...delivery,
+      ...completeDelivery,
       otpCode,
     };
   }
@@ -105,10 +237,6 @@ export class DeliveryService {
       throw new Error('Rider not found.');
     }
 
-    if (rider.accountStatus !== 'ACTIVE') {
-      throw new Error('Selected rider account is not active.');
-    }
-
     if (rider.availabilityStatus !== 'ONLINE') {
       throw new Error('Selected rider is currently offline.');
     }
@@ -132,6 +260,12 @@ export class DeliveryService {
         },
         customer: {
           select: { id: true, fullName: true, phoneNumber: true },
+        },
+        order: {
+          include: {
+            restaurant: true,
+            items: true,
+          },
         },
       },
     });
@@ -178,7 +312,7 @@ export class DeliveryService {
           create: {
             status: 'ACCEPTED',
             updatedBy: riderId,
-            notes: 'Rider accepted the delivery assignment.',
+            notes: `Rider ${delivery.rider?.fullName} accepted the delivery.`,
           },
         },
       },
@@ -190,16 +324,9 @@ export class DeliveryService {
       role: Roles.CUSTOMER,
       recipientId: delivery.customerId,
       title: 'Delivery Accepted',
-      message: `Rider ${delivery.rider?.fullName || ''} has accepted your delivery and will head to pickup soon.`,
-      metadata: { deliveryId: delivery.id },
+      message: `Rider ${delivery.rider?.fullName} accepted your delivery and is heading to pickup.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
-
-    // Notify Admin
-    NotificationService.notifyAdmins(
-      'Delivery Accepted by Rider',
-      `Rider ${delivery.rider?.fullName} accepted order ${delivery.trackingCode}.`,
-      { deliveryId: delivery.id }
-    ).catch(() => {});
 
     return updated;
   }
@@ -210,11 +337,12 @@ export class DeliveryService {
   static async rejectDelivery(deliveryId: string, riderId: string, reason?: string) {
     const delivery = await prisma.delivery.findUnique({
       where: { id: deliveryId },
-      include: { rider: true },
+      include: { customer: true, rider: true },
     });
 
     if (!delivery) throw new Error('Delivery not found.');
     if (delivery.riderId !== riderId) throw new Error('You are not authorized for this delivery assignment.');
+    if (delivery.status !== 'ASSIGNED') throw new Error(`Cannot reject delivery with status ${delivery.status}.`);
 
     const updated = await prisma.delivery.update({
       where: { id: deliveryId },
@@ -229,22 +357,35 @@ export class DeliveryService {
           },
         },
       },
+      include: { customer: true },
     });
 
-    // Notify Admin to reassign
+    // Notify Admins
     NotificationService.notifyAdmins(
       'Delivery Assignment Rejected',
-      `Rider ${delivery.rider?.fullName} rejected order ${delivery.trackingCode}. Please reassign.`,
-      { deliveryId: delivery.id }
+      `Rider ${delivery.rider?.fullName} rejected assignment for order ${delivery.trackingCode}. Returned to pending queue.`,
+      { deliveryId: delivery.id, trackingCode: delivery.trackingCode }
     ).catch(() => {});
 
     return updated;
   }
 
   /**
-   * Rider Updates Delivery Stage (ARRIVED_AT_PICKUP, PICKED_UP, ON_THE_WAY, DELIVERED)
+   * Rider Updates Delivery Progress Status (Alias)
    */
   static async updateRiderDeliveryStatus(
+    deliveryId: string,
+    riderId: string,
+    nextStatus: DeliveryStatus,
+    notes?: string
+  ) {
+    return this.updateDeliveryStatus(deliveryId, riderId, nextStatus, notes);
+  }
+
+  /**
+   * Rider Updates Delivery Progress Status
+   */
+  static async updateDeliveryStatus(
     deliveryId: string,
     riderId: string,
     nextStatus: DeliveryStatus,
@@ -306,6 +447,7 @@ export class DeliveryService {
     };
 
     if (statusMessages[nextStatus]) {
+      // Notify Customer
       NotificationService.sendNotification({
         role: Roles.CUSTOMER,
         recipientId: delivery.customerId,
@@ -313,6 +455,13 @@ export class DeliveryService {
         message: statusMessages[nextStatus].body,
         metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus },
       }).catch(() => {});
+
+      // Notify Admins
+      NotificationService.notifyAdmins(
+        statusMessages[nextStatus].title,
+        `Order ${delivery.trackingCode} (${delivery.customer?.fullName}): ${statusMessages[nextStatus].body}`,
+        { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus }
+      ).catch(() => {});
     }
 
     return updated;
@@ -353,6 +502,12 @@ export class DeliveryService {
         },
       },
       include: { customer: true, rider: true, otp: true },
+    });
+
+    // If linked to Order, also update order status
+    await prisma.order.updateMany({
+      where: { deliveryId: delivery.id },
+      data: { status: 'COMPLETED', paymentStatus: 'PAID' },
     });
 
     // Notify Customer
@@ -398,7 +553,7 @@ export class DeliveryService {
         throw new Error('Unauthorized: You can only cancel your own deliveries.');
       }
       if (delivery.status !== 'PENDING' && delivery.status !== 'ASSIGNED') {
-        throw new Error(`Customers can only cancel pending or uncollected requests. Current status: ${delivery.status}`);
+        throw new Error(`Cannot cancel delivery once it is in ${delivery.status} state.`);
       }
     }
 
@@ -411,11 +566,17 @@ export class DeliveryService {
           create: {
             status: 'CANCELLED',
             updatedBy: cancelledByUserId,
-            notes: `Delivery cancelled. Reason: ${reason || 'None provided'}`,
+            notes: `Delivery cancelled. Reason: ${reason || 'Not specified'}`,
           },
         },
       },
       include: { customer: true, rider: true },
+    });
+
+    // If linked to Order, also cancel order
+    await prisma.order.updateMany({
+      where: { deliveryId: delivery.id },
+      data: { status: 'CANCELLED' },
     });
 
     // Notify Customer if cancelled by admin
@@ -445,6 +606,7 @@ export class DeliveryService {
 
   /**
    * Get Deliveries list with filters & pagination
+   * Includes Customer, Rider, OTP, StatusLogs, AND Order with Restaurant & Items
    */
   static async getDeliveries(params: {
     customerId?: string;
@@ -479,6 +641,7 @@ export class DeliveryService {
         { receiverPhone: { contains: params.search, mode: 'insensitive' } },
         { pickupLocation: { contains: params.search, mode: 'insensitive' } },
         { destination: { contains: params.search, mode: 'insensitive' } },
+        { order: { restaurant: { name: { contains: params.search, mode: 'insensitive' } } } },
       ];
     }
 
@@ -490,6 +653,43 @@ export class DeliveryService {
           rider: { select: { id: true, fullName: true, phoneNumber: true, email: true, vehicleInfo: true } },
           otp: { select: { otpCode: true, isVerified: true } },
           statusLogs: { orderBy: { createdAt: 'desc' } },
+          order: {
+            include: {
+              restaurant: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  category: true,
+                  cuisineType: true,
+                  phone1: true,
+                  phone2: true,
+                  address: true,
+                  rating: true,
+                  deliveryFee: true,
+                  deliveryTime: true,
+                  banner: true,
+                  avatar: true,
+                  status: true,
+                },
+              },
+              items: {
+                include: {
+                  foodItem: {
+                    select: {
+                      id: true,
+                      code: true,
+                      name: true,
+                      category: true,
+                      image: true,
+                      tag: true,
+                      price: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -509,15 +709,32 @@ export class DeliveryService {
 
   /**
    * Get single delivery by ID
+   * Includes Customer, Rider, OTP, StatusLogs, AND Order with Restaurant & Items
    */
   static async getDeliveryById(deliveryId: string) {
-    const delivery = await prisma.delivery.findUnique({
-      where: { id: deliveryId },
+    const delivery = await prisma.delivery.findFirst({
+      where: {
+        OR: [
+          { id: deliveryId },
+          { trackingCode: deliveryId },
+          { trackingCode: `#${deliveryId}` },
+        ],
+      },
       include: {
         customer: { select: { id: true, fullName: true, phoneNumber: true, email: true, address: true } },
         rider: { select: { id: true, fullName: true, phoneNumber: true, email: true, vehicleInfo: true } },
         otp: { select: { otpCode: true, isVerified: true, createdAt: true } },
         statusLogs: { orderBy: { createdAt: 'asc' } },
+        order: {
+          include: {
+            restaurant: true,
+            items: {
+              include: {
+                foodItem: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -529,8 +746,13 @@ export class DeliveryService {
    * Get real-time delivery tracking information with live coordinates
    */
   static async getDeliveryTrackingInfo(deliveryId: string) {
-    const delivery = await prisma.delivery.findUnique({
-      where: { id: deliveryId },
+    const delivery = await prisma.delivery.findFirst({
+      where: {
+        OR: [
+          { id: deliveryId },
+          { trackingCode: deliveryId },
+        ],
+      },
       include: {
         rider: {
           select: {
@@ -547,6 +769,12 @@ export class DeliveryService {
         statusLogs: {
           orderBy: { createdAt: 'desc' },
           take: 5,
+        },
+        order: {
+          include: {
+            restaurant: true,
+            items: true,
+          },
         },
       },
     });
@@ -581,7 +809,111 @@ export class DeliveryService {
             },
           }
         : null,
+      order: delivery.order,
       recentUpdates: delivery.statusLogs,
+      payment: {
+        method: delivery.paymentMethod,
+        status: delivery.paymentStatus,
+        receiptUrl: delivery.receiptUrl,
+      },
     };
+  }
+
+  /**
+   * Customer uploads / attaches payment receipt for delivery
+   */
+  static async uploadPaymentReceipt(
+    deliveryId: string,
+    data: {
+      receiptUrl: string;
+      paymentMethod?: string;
+      paymentStatus?: string;
+      userId?: string;
+    }
+  ) {
+    const delivery = await this.getDeliveryById(deliveryId);
+
+    const paymentMethod = data.paymentMethod || delivery.paymentMethod || 'DIGITAL_TRANSFER';
+    const paymentStatus = data.paymentStatus || 'PAID_PENDING_VERIFICATION';
+
+    // Update Delivery and linked Order (if any)
+    const updatedDelivery = await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        receiptUrl: data.receiptUrl,
+        paymentMethod,
+        paymentStatus,
+        statusLogs: {
+          create: {
+            status: delivery.status,
+            updatedBy: data.userId || delivery.customerId,
+            notes: `Payment receipt uploaded (${paymentMethod}). Verification status: ${paymentStatus}.`,
+          },
+        },
+      },
+      include: {
+        customer: true,
+        order: {
+          include: {
+            restaurant: true,
+            items: true,
+          },
+        },
+      },
+    });
+
+    if (delivery.order) {
+      await prisma.order.update({
+        where: { id: delivery.order.id },
+        data: {
+          receiptUrl: data.receiptUrl,
+          paymentMethod,
+          paymentStatus,
+        },
+      });
+    }
+
+    // Notify Admin of Payment Receipt Upload
+    NotificationService.notifyAdmins(
+      'Payment Receipt Uploaded',
+      `Payment receipt uploaded for delivery ${delivery.trackingCode} by ${delivery.customer.fullName}.`,
+      { deliveryId: delivery.id, trackingCode: delivery.trackingCode, receiptUrl: data.receiptUrl }
+    ).catch(() => {});
+
+    return updatedDelivery;
+  }
+
+  /**
+   * Admin verifies / updates payment status
+   */
+  static async updatePaymentStatus(
+    deliveryId: string,
+    paymentStatus: string,
+    adminId: string
+  ) {
+    const delivery = await this.getDeliveryById(deliveryId);
+
+    const updated = await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        paymentStatus,
+        statusLogs: {
+          create: {
+            status: delivery.status,
+            updatedBy: adminId,
+            notes: `Payment status updated to: ${paymentStatus}.`,
+          },
+        },
+      },
+    });
+
+    if (delivery.order) {
+      await prisma.order.update({
+        where: { id: delivery.order.id },
+        data: { paymentStatus },
+      });
+    }
+
+    return updated;
   }
 }

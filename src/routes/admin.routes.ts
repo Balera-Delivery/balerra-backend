@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
+import { RestaurantController } from '../controllers/restaurant.controller';
 import { authenticateJwt } from '../middleware/auth.middleware';
 import { authorizeRole } from '../middleware/role.middleware';
 import { validateRequest } from '../middleware/validate.middleware';
@@ -13,6 +14,15 @@ import {
   updateSystemSettingSchema,
 } from '../validations/admin.validation';
 import { assignRiderSchema, cancelDeliverySchema } from '../validations/delivery.validation';
+import {
+  createRestaurantSchema,
+  updateRestaurantSchema,
+  updateRestaurantPhonesSchema,
+  updateRestaurantStatusSchema,
+  createFoodItemSchema,
+  updateFoodItemSchema,
+  toggleFoodAvailabilitySchema,
+} from '../validations/restaurant.validation';
 
 const router = Router();
 
@@ -45,6 +55,7 @@ router.get('/map/live', AdminController.getLiveMap);
 router.get('/deliveries', AdminController.getDeliveries);
 router.get('/deliveries/:id', AdminController.getDeliveryById);
 router.put('/deliveries/:id/assign', validateRequest(assignRiderSchema), AdminController.assignRider);
+router.post('/deliveries/:id/assign', validateRequest(assignRiderSchema), AdminController.assignRider);
 router.put('/deliveries/:id/reassign', validateRequest(assignRiderSchema), AdminController.reassignRider);
 router.put('/assign-rider', validateRequest(assignRiderSchema), (req, res, next) => {
   // Support /assign-rider?id=xxx
@@ -55,6 +66,31 @@ router.put('/assign-rider', validateRequest(assignRiderSchema), (req, res, next)
   next();
 });
 router.post('/deliveries/:id/cancel', validateRequest(cancelDeliverySchema), AdminController.cancelDelivery);
+router.patch('/deliveries/:id/payment-status', AdminController.updatePaymentStatus);
+
+// Hotels & Restaurants Management
+router.get('/restaurants', RestaurantController.getRestaurants);
+router.post('/restaurants', validateRequest(createRestaurantSchema), RestaurantController.createRestaurant);
+router.get('/restaurants/:id', RestaurantController.getRestaurantById);
+router.put('/restaurants/:id', validateRequest(updateRestaurantSchema), RestaurantController.updateRestaurant);
+router.patch('/restaurants/:id/status', validateRequest(updateRestaurantStatusSchema), RestaurantController.toggleRestaurantStatus);
+router.patch('/restaurants/:id/phones', validateRequest(updateRestaurantPhonesSchema), RestaurantController.updateRestaurantPhones);
+router.delete('/restaurants/:id', RestaurantController.deleteRestaurant);
+
+// Restaurant Food Items
+router.post('/restaurants/:id/foods', validateRequest(createFoodItemSchema), RestaurantController.addFoodItem);
+router.put('/restaurants/foods/:foodId', validateRequest(updateFoodItemSchema), RestaurantController.updateFoodItem);
+router.patch('/restaurants/foods/:foodId/availability', validateRequest(toggleFoodAvailabilitySchema), RestaurantController.toggleFoodAvailability);
+router.delete('/restaurants/foods/:foodId', RestaurantController.deleteFoodItem);
+
+// Direct Food routes (shortcuts)
+router.put('/foods/:foodId', validateRequest(updateFoodItemSchema), RestaurantController.updateFoodItem);
+router.patch('/foods/:foodId/availability', validateRequest(toggleFoodAvailabilitySchema), RestaurantController.toggleFoodAvailability);
+router.delete('/foods/:foodId', RestaurantController.deleteFoodItem);
+router.get('/foods', RestaurantController.getMasterFoods);
+
+// Seed / Sync Default Establishments into Database
+router.post('/restaurants/seed-defaults', RestaurantController.seedDefaults);
 
 // Reports
 router.get('/reports', AdminController.getReports);

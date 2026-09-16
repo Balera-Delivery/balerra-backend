@@ -4,6 +4,7 @@ import customerRoutes from './customer.routes';
 import riderRoutes from './rider.routes';
 import adminRoutes from './admin.routes';
 import notificationRoutes from './notification.routes';
+import { RestaurantController } from '../controllers/restaurant.controller';
 
 const router = Router();
 
@@ -15,6 +16,11 @@ router.get('/health', (req, res) => {
     service: 'Balerra Delivery Backend API',
   });
 });
+
+// Public / Guest Restaurant & Food Menu Discovery
+router.get('/restaurants', RestaurantController.getCustomerRestaurants);
+router.get('/restaurants/:id', RestaurantController.getCustomerRestaurantMenu);
+router.get('/foods', RestaurantController.getMasterFoods);
 
 // Mounted Routes
 router.use('/auth', authRoutes);
