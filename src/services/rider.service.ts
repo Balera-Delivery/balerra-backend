@@ -159,10 +159,16 @@ export class RiderService {
       prisma.delivery.findMany({
         where: {
           riderId,
-          status: 'COMPLETED',
+          status: { in: ['DELIVERED', 'COMPLETED'] },
         },
         include: {
           customer: { select: { id: true, fullName: true, phoneNumber: true } },
+          order: {
+            include: {
+              restaurant: { select: { id: true, name: true, phone1: true, address: true, avatar: true } },
+              items: true,
+            },
+          },
         },
         orderBy: { updatedAt: 'desc' },
         skip,
@@ -171,7 +177,7 @@ export class RiderService {
       prisma.delivery.count({
         where: {
           riderId,
-          status: 'COMPLETED',
+          status: { in: ['DELIVERED', 'COMPLETED'] },
         },
       }),
     ]);
@@ -182,6 +188,39 @@ export class RiderService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Get Earnings and Payout Summary for Rider
+   */
+  static async getEarningsSummary(riderId: string) {
+    const completed = await prisma.delivery.findMany({
+      where: {
+        riderId,
+        status: { in: ['DELIVERED', 'COMPLETED'] },
+      },
+      include: {
+        order: {
+          include: {
+            restaurant: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const totalEarned = completed.reduce((sum, d) => sum + (d.riderFee || 50), 0);
+    const totalPaid = completed.filter((d) => d.isPaidToRider).reduce((sum, d) => sum + (d.riderFee || 50), 0);
+    const amountOwed = totalEarned - totalPaid;
+
+    return {
+      totalDeliveries: completed.length,
+      totalEarned,
+      totalPaid,
+      amountOwed,
+      unpaidDeliveries: completed.filter((d) => !d.isPaidToRider),
+      paidDeliveries: completed.filter((d) => d.isPaidToRider),
     };
   }
 }

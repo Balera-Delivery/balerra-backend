@@ -24,6 +24,8 @@ router.put('/read', (req: Request, res: Response, next: NextFunction) => {
   }
   return NotificationController.markAllAsRead(req as any, res);
 });
+router.delete('/:id', NotificationController.deleteNotification);
+router.delete('/', NotificationController.clearAllNotifications);
 
 // Admin-only notification dispatch
 router.post(

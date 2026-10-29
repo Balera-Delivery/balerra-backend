@@ -114,6 +114,36 @@ export class RiderController {
     }
   }
 
+  static async verifyQr(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const riderId = req.user!.userId;
+      const deliveryId = String(req.params.id);
+      const { qrCodeToken } = req.body;
+      const result = await DeliveryService.completeDeliveryWithQr(deliveryId, riderId, qrCodeToken);
+      sendSuccess({
+        res,
+        message: 'QR code verified successfully. Delivery completed! 🎉',
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async getEarnings(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const riderId = req.user!.userId;
+      const result = await RiderService.getEarningsSummary(riderId);
+      sendSuccess({
+        res,
+        message: 'Rider earnings summary loaded.',
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
   static async getDeliveryHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const riderId = req.user!.userId;

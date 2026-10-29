@@ -121,20 +121,22 @@ export class AuthService {
    */
   static async registerRider(data: {
     fullName: string;
-    email: string;
+    email?: string;
     phoneNumber: string;
     password: string;
     vehicleInfo?: string;
   }) {
-    const existingEmail = await prisma.rider.findUnique({
-      where: { email: data.email },
-    });
-    if (existingEmail) {
-      throw new Error('Email address is already registered for a rider.');
+    if (data.email && data.email.trim() !== '') {
+      const existingEmail = await prisma.rider.findUnique({
+        where: { email: data.email.trim() },
+      });
+      if (existingEmail) {
+        throw new Error('Email address is already registered for a rider.');
+      }
     }
 
     const existingPhone = await prisma.rider.findUnique({
-      where: { phoneNumber: data.phoneNumber },
+      where: { phoneNumber: data.phoneNumber.trim() },
     });
     if (existingPhone) {
       throw new Error('Phone number is already registered for a rider.');
@@ -145,19 +147,31 @@ export class AuthService {
     const rider = await prisma.rider.create({
       data: {
         fullName: data.fullName,
-        email: data.email,
-        phoneNumber: data.phoneNumber,
+        email: data.email && data.email.trim() !== '' ? data.email.trim() : null,
+        phoneNumber: data.phoneNumber.trim(),
         password: hashedPassword,
         vehicleInfo: data.vehicleInfo || null,
         accountStatus: 'PENDING_APPROVAL',
         availabilityStatus: 'OFFLINE',
+        isPhoneVerified: false,
       },
     });
+
+    // Generate initial SMS OTP for phone verification
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await prisma.phoneVerification.create({
+      data: {
+        phoneNumber: rider.phoneNumber,
+        code: otpCode,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      },
+    });
+    console.log(`[SMS OTP] Verification code for ${rider.phoneNumber}: ${otpCode}`);
 
     // Notify admins to review the new rider registration
     NotificationService.notifyAdmins(
       'New Rider Application',
-      `Rider ${rider.fullName} (${rider.email}) registered and is awaiting approval.`,
+      `Rider ${rider.fullName} (${rider.phoneNumber}) registered and is awaiting approval.`,
       { riderId: rider.id }
     ).catch(() => {});
 
@@ -167,25 +181,40 @@ export class AuthService {
       email: rider.email,
       phoneNumber: rider.phoneNumber,
       accountStatus: rider.accountStatus,
-      message: 'Registration submitted successfully. Please wait for admin approval before logging in.',
+      isPhoneVerified: rider.isPhoneVerified,
+      message: 'Registration submitted successfully. Please verify your phone number.',
     };
   }
 
   /**
-   * Rider Login (Requires email and must be ACTIVE)
+   * Rider Login (Accepts phone number or email, and checks active / not deleted / not deactivated)
    */
-  static async loginRider(email: string, passwordPlain: string) {
-    const rider = await prisma.rider.findUnique({
-      where: { email },
+  static async loginRider(identifier: string, passwordPlain: string) {
+    const cleanId = identifier.trim();
+    const rider = await prisma.rider.findFirst({
+      where: {
+        OR: [
+          { phoneNumber: cleanId },
+          { email: cleanId },
+        ],
+      },
     });
 
     if (!rider) {
-      throw new Error('Invalid email or password.');
+      throw new Error('Invalid phone number or password.');
+    }
+
+    if (rider.isDeleted) {
+      throw new Error('This rider account has been removed. Please contact administration.');
+    }
+
+    if (rider.isDeactivated) {
+      throw new Error('Your rider account is currently deactivated. Please contact administration.');
     }
 
     const isMatch = await bcrypt.compare(passwordPlain, rider.password);
     if (!isMatch) {
-      throw new Error('Invalid email or password.');
+      throw new Error('Invalid phone number or password.');
     }
 
     if (rider.accountStatus === 'PENDING_APPROVAL') {
@@ -212,8 +241,76 @@ export class AuthService {
         vehicleInfo: rider.vehicleInfo,
         availabilityStatus: rider.availabilityStatus,
         accountStatus: rider.accountStatus,
+        isPhoneVerified: rider.isPhoneVerified,
       },
       token,
+    };
+  }
+
+  /**
+   * Send Phone Verification SMS OTP
+   */
+  static async sendPhoneOtp(phoneNumber: string) {
+    const cleanPhone = phoneNumber.trim();
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Invalidate previous unverified codes for this phone
+    await prisma.phoneVerification.deleteMany({
+      where: { phoneNumber: cleanPhone, isVerified: false },
+    });
+
+    await prisma.phoneVerification.create({
+      data: {
+        phoneNumber: cleanPhone,
+        code: otpCode,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      },
+    });
+
+    console.log(`[SMS OTP Service] Sent verification code to ${cleanPhone}: ${otpCode}`);
+    return {
+      success: true,
+      message: `Verification code sent to ${cleanPhone}.`,
+      // For development/testing convenience, include code in non-production
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otpCode } : {}),
+    };
+  }
+
+  /**
+   * Verify Phone SMS OTP
+   */
+  static async verifyPhoneOtp(phoneNumber: string, code: string) {
+    const cleanPhone = phoneNumber.trim();
+    const cleanCode = code.trim();
+
+    const record = await prisma.phoneVerification.findFirst({
+      where: {
+        phoneNumber: cleanPhone,
+        code: cleanCode,
+        isVerified: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new Error('Invalid or expired verification code.');
+    }
+
+    await prisma.phoneVerification.update({
+      where: { id: record.id },
+      data: { isVerified: true },
+    });
+
+    // Mark rider as verified if exists
+    await prisma.rider.updateMany({
+      where: { phoneNumber: cleanPhone },
+      data: { isPhoneVerified: true },
+    });
+
+    return {
+      success: true,
+      message: 'Phone number verified successfully.',
     };
   }
 

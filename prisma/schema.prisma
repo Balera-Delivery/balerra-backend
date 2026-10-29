@@ -67,11 +67,14 @@ model Customer {
 model Rider {
   id                 String             @id @default(uuid())
   fullName           String
-  email              String             @unique
+  email              String?            @unique
   phoneNumber        String             @unique
   password           String
   availabilityStatus RiderAvailability  @default(OFFLINE)
   accountStatus      AccountStatus      @default(PENDING_APPROVAL)
+  isPhoneVerified    Boolean            @default(false)
+  isDeactivated      Boolean            @default(false)
+  isDeleted          Boolean            @default(false)
   vehicleInfo        String?
   currentLatitude    Float?
   currentLongitude   Float?
@@ -193,6 +196,7 @@ model OrderItem {
 model Delivery {
   id                  String               @id @default(uuid())
   trackingCode        String               @unique
+  qrCodeToken         String?              @unique
   customerId          String
   riderId             String?
   pickupLocation      String
@@ -211,6 +215,10 @@ model Delivery {
   receiptUrl          String?              @db.Text
   status              DeliveryStatus       @default(PENDING)
   cancellationReason  String?
+  riderFee            Float?               @default(50.0)
+  isPaidToRider       Boolean              @default(false)
+  riderPaidAt         DateTime?
+  payoutReference     String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -275,4 +283,15 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+model PhoneVerification {
+  id          String   @id @default(uuid())
+  phoneNumber String
+  code        String
+  isVerified  Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@map("phone_verifications")
 }

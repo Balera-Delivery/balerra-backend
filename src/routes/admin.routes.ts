@@ -42,6 +42,11 @@ router.patch('/customers/:id/status', validateRequest(updateAccountStatusSchema)
 // Rider Management
 router.get('/riders', AdminController.getRiders);
 router.get('/riders/nearby', AdminController.getNearbyRiders);
+router.get('/riders/payouts', AdminController.getRiderPayoutsSummary);
+router.get('/riders/:id/payouts', AdminController.getRiderPaymentHistory);
+router.post('/riders/:id/pay', AdminController.markRiderPaid);
+router.patch('/riders/:id/deactivate', AdminController.toggleRiderDeactivation);
+router.delete('/riders/:id', AdminController.deleteRider);
 router.post('/riders', validateRequest(adminCreateRiderSchema), AdminController.createRider);
 router.get('/riders/:id', AdminController.getRiderById);
 router.patch('/riders/:id/approve', AdminController.approveRider);
@@ -94,9 +99,13 @@ router.post('/restaurants/seed-defaults', RestaurantController.seedDefaults);
 
 // Reports
 router.get('/reports', AdminController.getReports);
+router.get('/reports/deliveries', AdminController.getDeliveriesReport);
+router.get('/reports/export', AdminController.exportDeliveriesReport);
 
 // System Settings
 router.get('/settings', AdminController.getSettings);
 router.put('/settings', validateRequest(updateSystemSettingSchema), AdminController.updateSetting);
+router.get('/settings/payment', AdminController.getPaymentSettings);
+router.put('/settings/payment', AdminController.updatePaymentSettings);
 
 export default router;

@@ -43,6 +43,25 @@ export class NotificationController {
     }
   }
 
+  static async deleteNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const notificationId = String(req.params.id);
+      await NotificationService.deleteNotification(notificationId, req.user!.userId, req.user!.role);
+      sendSuccess({ res, message: 'Notification deleted successfully.' });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async clearAllNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      await NotificationService.clearAllNotifications(req.user!.userId, req.user!.role);
+      sendSuccess({ res, message: 'All notifications cleared successfully.' });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
   static async sendNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { targetRole, targetUserId, title, message } = req.body;

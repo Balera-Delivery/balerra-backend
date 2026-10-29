@@ -48,6 +48,19 @@ router.post('/verify-otp', validateRequest(verifyOtpSchema), (req, res, next) =>
   next();
 });
 
+// QR Code Verification to complete delivery
+router.post('/deliveries/:id/verify-qr', RiderController.verifyQr);
+router.post('/verify-qr', (req, res, next) => {
+  if (req.query.id) {
+    (req.params as any).id = req.query.id as string;
+    return RiderController.verifyQr(req, res);
+  }
+  next();
+});
+
+// Earnings Summary
+router.get('/earnings', RiderController.getEarnings);
+
 // Delivery History
 router.get('/history', RiderController.getDeliveryHistory);
 

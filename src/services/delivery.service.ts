@@ -104,9 +104,12 @@ export class DeliveryService {
     const paymentMethod = data.paymentMethod || (data.receiptUrl ? 'DIGITAL_TRANSFER' : 'TELEBIRR');
     const paymentStatus = data.paymentStatus || (data.receiptUrl ? 'PAID_PENDING_VERIFICATION' : 'PENDING');
 
+    const qrCodeToken = `BALERA-${trackingCode}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
     const delivery = await prisma.delivery.create({
       data: {
         trackingCode,
+        qrCodeToken,
         customerId,
         pickupLocation,
         pickupLatitude: data.pickupLatitude || (restaurant ? restaurant.latitude : null),
@@ -143,20 +146,35 @@ export class DeliveryService {
     // If food order items or restaurant is present, create linked Order
     if (isFood && restaurant) {
       let subtotal = 0;
-      const orderItemsData = itemsToSave.map((it) => {
-        const price = Number(it.price) || 0;
-        const qty = Number(it.quantity) || 1;
-        const itemSub = price * qty;
+      const orderItemsData = [];
+
+      for (const it of itemsToSave) {
+        let verifiedPrice = 0;
+        if (it.foodItemId) {
+          const dbItem = await prisma.foodItem.findUnique({
+            where: { id: it.foodItemId },
+          });
+          if (dbItem) {
+            verifiedPrice = dbItem.price;
+          }
+        }
+        // Fallback only if no foodItemId found in DB
+        if (!verifiedPrice) {
+          verifiedPrice = Number(it.price) || 0;
+        }
+        const qty = Math.max(1, Number(it.quantity) || 1);
+        const itemSub = verifiedPrice * qty;
         subtotal += itemSub;
-        return {
+
+        orderItemsData.push({
           foodItemId: it.foodItemId || null,
           name: it.name,
-          price,
+          price: verifiedPrice,
           quantity: qty,
           subtotal: itemSub,
           notes: it.notes || null,
-        };
-      });
+        });
+      }
 
       const deliveryFee = restaurant.deliveryFee || 60;
       const totalAmount = subtotal + deliveryFee;
@@ -479,8 +497,8 @@ export class DeliveryService {
     if (!delivery) throw new Error('Delivery not found.');
     if (delivery.riderId !== riderId) throw new Error('You are not the assigned rider for this delivery.');
 
-    if (delivery.status !== 'DELIVERED') {
-      throw new Error(`OTP can only be verified when delivery is in DELIVERED state. Current status: ${delivery.status}`);
+    if (delivery.status !== 'DELIVERED' && delivery.status !== 'ON_THE_WAY') {
+      throw new Error(`OTP can only be verified when delivery is ON THE WAY or DELIVERED. Current status: ${delivery.status}`);
     }
 
     const isValid = await OtpService.verifyDeliveryOtp(deliveryId, enteredOtp);
@@ -523,6 +541,77 @@ export class DeliveryService {
     NotificationService.notifyAdmins(
       'Delivery Completed',
       `Order ${delivery.trackingCode} successfully delivered by ${delivery.rider?.fullName}.`,
+      { deliveryId: delivery.id }
+    ).catch(() => {});
+
+    return updated;
+  }
+
+  /**
+   * Rider Verifies Customer QR Code to complete delivery
+   */
+  static async completeDeliveryWithQr(deliveryId: string, riderId: string, qrCodeToken: string) {
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: deliveryId },
+      include: { customer: true, rider: true, otp: true, order: true },
+    });
+
+    if (!delivery) throw new Error('Delivery not found.');
+    if (delivery.riderId && delivery.riderId !== riderId) {
+      throw new Error('You are not the assigned rider for this delivery.');
+    }
+
+    if (delivery.status !== 'ON_THE_WAY' && delivery.status !== 'DELIVERED') {
+      throw new Error(`QR can only be verified when delivery is ON THE WAY or DELIVERED. Current status: ${delivery.status}`);
+    }
+
+    if (!delivery.qrCodeToken || delivery.qrCodeToken.trim() !== qrCodeToken.trim()) {
+      throw new Error('Invalid QR code token. Please ask the recipient to refresh their code or use OTP.');
+    }
+
+    const updated = await prisma.delivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: 'COMPLETED',
+        riderId: delivery.riderId || riderId,
+        statusLogs: {
+          create: {
+            status: 'COMPLETED',
+            updatedBy: riderId,
+            notes: 'Delivery completed successfully via Customer QR code scan.',
+          },
+        },
+      },
+      include: { customer: true, rider: true, otp: true, order: true },
+    });
+
+    // If linked to Order, also update order status
+    if (delivery.order) {
+      await prisma.order.update({
+        where: { id: delivery.order.id },
+        data: { status: 'COMPLETED', paymentStatus: 'PAID' },
+      });
+    }
+
+    // Mark OTP as verified as well
+    await prisma.oTP.updateMany({
+      where: { deliveryId: delivery.id },
+      data: { isVerified: true, verifiedAt: new Date() },
+    });
+
+    // Notify Customer
+    NotificationService.sendNotification({
+      role: Roles.CUSTOMER,
+      recipientId: delivery.customerId,
+      title: 'Delivery Completed! 🎉',
+      message: `Your package (${delivery.trackingCode}) has been safely handed over via QR scan.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
+    }).catch(() => {});
+
+    // Notify Admins
+    NotificationService.notifyAdmins(
+      'Delivery Completed',
+      `Order ${delivery.trackingCode} successfully delivered via QR scan by ${delivery.rider?.fullName || 'rider'}.`,
       { deliveryId: delivery.id }
     ).catch(() => {});
 

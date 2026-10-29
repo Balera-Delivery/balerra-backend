@@ -186,4 +186,32 @@ export class NotificationService {
       data: { isRead: true },
     });
   }
+
+  /**
+   * Delete single notification
+   */
+  static async deleteNotification(notificationId: string, userId: string, role: RoleType) {
+    const where: any = { id: notificationId };
+    if (role === Roles.CUSTOMER) where.customerId = userId;
+    else if (role === Roles.RIDER) where.riderId = userId;
+    else if (role === Roles.ADMIN) where.adminId = userId;
+
+    return prisma.notification.deleteMany({
+      where,
+    });
+  }
+
+  /**
+   * Clear all notifications for current user
+   */
+  static async clearAllNotifications(userId: string, role: RoleType) {
+    const where: any = {};
+    if (role === Roles.CUSTOMER) where.customerId = userId;
+    else if (role === Roles.RIDER) where.riderId = userId;
+    else if (role === Roles.ADMIN) where.adminId = userId;
+
+    return prisma.notification.deleteMany({
+      where,
+    });
+  }
 }

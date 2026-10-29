@@ -49,8 +49,9 @@ export class AuthController {
 
   static async loginRider(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
-      const result = await AuthService.loginRider(email, password);
+      const identifier = req.body.phoneNumber || req.body.identifier || req.body.email;
+      const { password } = req.body;
+      const result = await AuthService.loginRider(identifier, password);
       sendSuccess({
         res,
         message: 'Rider logged in successfully.',
@@ -58,6 +59,34 @@ export class AuthController {
       });
     } catch (error: any) {
       sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: error.message });
+    }
+  }
+
+  static async sendPhoneOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { phoneNumber } = req.body;
+      const result = await AuthService.sendPhoneOtp(phoneNumber);
+      sendSuccess({
+        res,
+        message: result.message,
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async verifyPhoneOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { phoneNumber, code } = req.body;
+      const result = await AuthService.verifyPhoneOtp(phoneNumber, code);
+      sendSuccess({
+        res,
+        message: result.message,
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
     }
   }
 

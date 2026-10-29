@@ -10,9 +10,15 @@ import {
   adminLoginSchema,
   changePasswordSchema,
   updateFcmTokenSchema,
+  sendPhoneOtpSchema,
+  verifyPhoneOtpSchema,
 } from '../validations/auth.validation';
 
 const router = Router();
+
+// Phone OTP verification (for Riders and Customers)
+router.post('/phone/send-otp', validateRequest(sendPhoneOtpSchema), AuthController.sendPhoneOtp);
+router.post('/phone/verify-otp', validateRequest(verifyPhoneOtpSchema), AuthController.verifyPhoneOtp);
 
 // Customer Auth
 router.post('/register', validateRequest(customerRegisterSchema), AuthController.registerCustomer);

@@ -4,6 +4,7 @@ import { AccountStatus, RiderAvailability } from '@prisma/client';
 import { NotificationService } from './notification.service';
 import { Roles } from '../constants/roles';
 import { calculateDistanceKm } from '../utils/distance';
+import { ExportUtils, DeliveryExportItem } from '../utils/export.utils';
 
 export class AdminService {
   /**
@@ -83,7 +84,6 @@ export class AdminService {
       where.OR = [
         { fullName: { contains: params.search, mode: 'insensitive' } },
         { phoneNumber: { contains: params.search, mode: 'insensitive' } },
-        { email: { contains: params.search, mode: 'insensitive' } },
       ];
     }
 
@@ -94,7 +94,6 @@ export class AdminService {
           id: true,
           fullName: true,
           phoneNumber: true,
-          email: true,
           address: true,
           status: true,
           createdAt: true,
@@ -229,12 +228,16 @@ export class AdminService {
     availabilityStatus?: RiderAvailability;
     page?: number;
     limit?: number;
+    includeDeleted?: boolean;
   }) {
     const page = params.page && params.page > 0 ? params.page : 1;
     const limit = params.limit && params.limit > 0 ? params.limit : 20;
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    if (!params.includeDeleted) {
+      where.isDeleted = false;
+    }
     if (params.accountStatus) where.accountStatus = params.accountStatus;
     if (params.availabilityStatus) where.availabilityStatus = params.availabilityStatus;
 
@@ -257,6 +260,9 @@ export class AdminService {
           vehicleInfo: true,
           availabilityStatus: true,
           accountStatus: true,
+          isDeactivated: true,
+          isDeleted: true,
+          isPhoneVerified: true,
           createdAt: true,
           _count: { select: { deliveries: true } },
         },
@@ -427,8 +433,439 @@ export class AdminService {
         vehicleInfo: true,
         availabilityStatus: true,
         accountStatus: true,
+        isDeactivated: true,
+        isDeleted: true,
       },
     });
+  }
+
+  /**
+   * Rider Management: Toggle Deactivation
+   */
+  static async toggleRiderDeactivation(riderId: string, isDeactivated: boolean) {
+    const rider = await prisma.rider.findUnique({ where: { id: riderId } });
+    if (!rider) throw new Error('Rider not found.');
+
+    return prisma.rider.update({
+      where: { id: riderId },
+      data: {
+        isDeactivated,
+        ...(isDeactivated && { availabilityStatus: 'OFFLINE' }),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        phoneNumber: true,
+        email: true,
+        isDeactivated: true,
+        isDeleted: true,
+        accountStatus: true,
+        availabilityStatus: true,
+      },
+    });
+  }
+
+  /**
+   * Rider Management: Soft Delete Rider
+   * A removed rider cannot log in anymore, but old delivery history is preserved.
+   */
+  static async softDeleteRider(riderId: string) {
+    const rider = await prisma.rider.findUnique({ where: { id: riderId } });
+    if (!rider) throw new Error('Rider not found.');
+
+    return prisma.rider.update({
+      where: { id: riderId },
+      data: {
+        isDeleted: true,
+        isDeactivated: true,
+        accountStatus: 'SUSPENDED',
+        availabilityStatus: 'OFFLINE',
+      },
+      select: {
+        id: true,
+        fullName: true,
+        phoneNumber: true,
+        isDeleted: true,
+        isDeactivated: true,
+        accountStatus: true,
+      },
+    });
+  }
+
+  /**
+   * Rider Payouts: Summary of earnings, amount owed, and paid for each rider
+   */
+  static async getRiderPayoutsSummary() {
+    const riders = await prisma.rider.findMany({
+      where: { isDeleted: false },
+      select: {
+        id: true,
+        fullName: true,
+        phoneNumber: true,
+        email: true,
+        deliveries: {
+          where: { status: { in: ['COMPLETED', 'DELIVERED'] } },
+          select: {
+            id: true,
+            riderFee: true,
+            isPaidToRider: true,
+          },
+        },
+      },
+    });
+
+    return riders.map((r) => {
+      let totalEarned = 0;
+      let totalPaid = 0;
+      let amountOwed = 0;
+      let completedCount = r.deliveries.length;
+      let unpaidCount = 0;
+
+      for (const d of r.deliveries) {
+        const fee = d.riderFee ?? 50.0;
+        totalEarned += fee;
+        if (d.isPaidToRider) {
+          totalPaid += fee;
+        } else {
+          amountOwed += fee;
+          unpaidCount++;
+        }
+      }
+
+      return {
+        riderId: r.id,
+        fullName: r.fullName,
+        phoneNumber: r.phoneNumber,
+        email: r.email,
+        completedDeliveriesCount: completedCount,
+        unpaidDeliveriesCount: unpaidCount,
+        totalEarned,
+        totalPaid,
+        amountOwed,
+      };
+    });
+  }
+
+  /**
+   * Rider Payouts: Payment history and unpaid deliveries for a rider
+   */
+  static async getRiderPaymentHistory(riderId: string) {
+    const deliveries = await prisma.delivery.findMany({
+      where: {
+        riderId,
+        status: { in: ['COMPLETED', 'DELIVERED'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        trackingCode: true,
+        destination: true,
+        riderFee: true,
+        isPaidToRider: true,
+        riderPaidAt: true,
+        payoutReference: true,
+        createdAt: true,
+        customer: {
+          select: { fullName: true, phoneNumber: true },
+        },
+      },
+    });
+
+    let totalEarned = 0;
+    let totalPaid = 0;
+    let amountOwed = 0;
+
+    deliveries.forEach((d) => {
+      const fee = d.riderFee ?? 50.0;
+      totalEarned += fee;
+      if (d.isPaidToRider) {
+        totalPaid += fee;
+      } else {
+        amountOwed += fee;
+      }
+    });
+
+    return {
+      riderId,
+      totalEarned,
+      totalPaid,
+      amountOwed,
+      deliveries,
+    };
+  }
+
+  /**
+   * Rider Payouts: Mark rider deliveries as paid
+   */
+  static async markRiderPaid(riderId: string, deliveryIds?: string[], payoutReference?: string) {
+    const where: any = {
+      riderId,
+      status: { in: ['COMPLETED', 'DELIVERED'] },
+      isPaidToRider: false,
+    };
+
+    if (deliveryIds && deliveryIds.length > 0) {
+      where.id = { in: deliveryIds };
+    }
+
+    const unpaidDeliveries = await prisma.delivery.findMany({
+      where,
+      select: { id: true, riderFee: true },
+    });
+
+    if (unpaidDeliveries.length === 0) {
+      return { count: 0, totalAmount: 0, message: 'No unpaid completed deliveries found for this rider.' };
+    }
+
+    const totalAmount = unpaidDeliveries.reduce((sum, d) => sum + (d.riderFee ?? 50.0), 0);
+    const ref = payoutReference || `PAYOUT-${Date.now()}`;
+    const paidAt = new Date();
+
+    const result = await prisma.delivery.updateMany({
+      where: {
+        id: { in: unpaidDeliveries.map((d) => d.id) },
+      },
+      data: {
+        isPaidToRider: true,
+        riderPaidAt: paidAt,
+        payoutReference: ref,
+      },
+    });
+
+    return {
+      count: result.count,
+      totalAmount,
+      payoutReference: ref,
+      paidAt,
+    };
+  }
+
+  /**
+   * Payment Settings: Bank and Mobile Money configuration
+   */
+  static async getPaymentSettings() {
+    const settings = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [
+            'bank_name',
+            'bank_account_number',
+            'bank_account_holder',
+            'mobile_money_provider',
+            'mobile_money_number',
+            'mobile_money_name',
+          ],
+        },
+      },
+    });
+
+    const map: Record<string, string> = {};
+    settings.forEach((s) => {
+      map[s.key] = s.value;
+    });
+
+    return {
+      bankName: map['bank_name'] || '',
+      bankAccountNumber: map['bank_account_number'] || '',
+      bankAccountHolder: map['bank_account_holder'] || '',
+      mobileMoneyProvider: map['mobile_money_provider'] || '',
+      mobileMoneyNumber: map['mobile_money_number'] || '',
+      mobileMoneyName: map['mobile_money_name'] || '',
+    };
+  }
+
+  static async updatePaymentSettings(data: {
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankAccountHolder?: string;
+    mobileMoneyProvider?: string;
+    mobileMoneyNumber?: string;
+    mobileMoneyName?: string;
+  }) {
+    const entries: [string, string | undefined][] = [
+      ['bank_name', data.bankName],
+      ['bank_account_number', data.bankAccountNumber],
+      ['bank_account_holder', data.bankAccountHolder],
+      ['mobile_money_provider', data.mobileMoneyProvider],
+      ['mobile_money_number', data.mobileMoneyNumber],
+      ['mobile_money_name', data.mobileMoneyName],
+    ];
+
+    for (const [key, val] of entries) {
+      if (val !== undefined) {
+        await prisma.systemSetting.upsert({
+          where: { key },
+          update: { value: val },
+          create: { key, value: val },
+        });
+      }
+    }
+
+    return this.getPaymentSettings();
+  }
+
+  /**
+   * Reports: Completed, In Progress, Pending, Cancelled deliveries
+   */
+  static async getDeliveriesReport(params: {
+    status?: 'completed' | 'in_progress' | 'pending' | 'cancelled' | 'all';
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const limit = params.limit && params.limit > 0 ? params.limit : 50;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (params.status) {
+      if (params.status === 'completed') {
+        where.status = { in: ['COMPLETED', 'DELIVERED'] };
+      } else if (params.status === 'in_progress') {
+        where.status = { in: ['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY'] };
+      } else if (params.status === 'pending') {
+        where.status = 'PENDING';
+      } else if (params.status === 'cancelled') {
+        where.status = 'CANCELLED';
+      }
+    }
+
+    if (params.startDate || params.endDate) {
+      where.createdAt = {};
+      if (params.startDate) where.createdAt.gte = new Date(params.startDate);
+      if (params.endDate) where.createdAt.lte = new Date(params.endDate);
+    }
+
+    const [deliveries, total, countsByStatus] = await Promise.all([
+      prisma.delivery.findMany({
+        where,
+        include: {
+          customer: { select: { fullName: true, phoneNumber: true } },
+          rider: { select: { fullName: true, phoneNumber: true } },
+          order: {
+            include: {
+              restaurant: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.delivery.count({ where }),
+      prisma.delivery.groupBy({
+        by: ['status'],
+        _count: { id: true },
+      }),
+    ]);
+
+    const statusCounts: Record<string, number> = {
+      completed: 0,
+      in_progress: 0,
+      pending: 0,
+      cancelled: 0,
+      total: 0,
+    };
+
+    countsByStatus.forEach((c) => {
+      statusCounts.total += c._count.id;
+      if (['COMPLETED', 'DELIVERED'].includes(c.status)) {
+        statusCounts.completed += c._count.id;
+      } else if (['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY'].includes(c.status)) {
+        statusCounts.in_progress += c._count.id;
+      } else if (c.status === 'PENDING') {
+        statusCounts.pending += c._count.id;
+      } else if (c.status === 'CANCELLED') {
+        statusCounts.cancelled += c._count.id;
+      }
+    });
+
+    return {
+      statusCounts,
+      deliveries: deliveries.map((d) => ({
+        id: d.id,
+        trackingCode: d.trackingCode,
+        status: d.status,
+        customerName: d.customer?.fullName || 'N/A',
+        customerPhone: d.customer?.phoneNumber || 'N/A',
+        riderName: d.rider?.fullName || 'Unassigned',
+        riderPhone: d.rider?.phoneNumber || 'N/A',
+        partner: d.order?.restaurant?.name || 'Custom / Partner',
+        destination: d.destination,
+        pickupLocation: d.pickupLocation,
+        paymentMethod: d.paymentMethod,
+        orderNumber: d.order?.orderNumber || 'N/A',
+        totalAmount: d.order?.totalAmount ?? (d.riderFee ?? 50.0),
+        riderFee: d.riderFee ?? 50.0,
+        isPaidToRider: d.isPaidToRider,
+        createdAt: d.createdAt,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Export deliveries report to CSV, Excel, or PDF
+   */
+  static async exportDeliveriesReport(params: {
+    format: 'csv' | 'excel' | 'pdf';
+    status?: 'completed' | 'in_progress' | 'pending' | 'cancelled' | 'all';
+    startDate?: string;
+    endDate?: string;
+  }) {
+    const reportData = await this.getDeliveriesReport({
+      status: params.status,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      limit: 1000,
+    });
+
+    const exportItems: DeliveryExportItem[] = reportData.deliveries.map((d: any) => ({
+      trackingCode: d.trackingCode,
+      orderNumber: d.orderNumber || 'N/A',
+      customerName: d.customerName,
+      customerPhone: d.customerPhone,
+      riderName: d.riderName,
+      restaurantName: d.partner,
+      pickupLocation: d.pickupLocation || 'Bale Robe',
+      destination: d.destination,
+      status: d.status,
+      paymentMethod: d.paymentMethod || 'CASH_ON_DELIVERY',
+      totalAmount: d.totalAmount,
+      riderFee: d.riderFee,
+      isPaidToRider: d.isPaidToRider,
+      createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : '',
+    }));
+
+    const title = `Balera Delivery Report - ${params.status ? params.status.toUpperCase() : 'ALL'}`;
+
+    if (params.format === 'csv') {
+      const csv = ExportUtils.generateCsv(exportItems);
+      return {
+        data: Buffer.from(csv, 'utf-8'),
+        filename: `report-${Date.now()}.csv`,
+        contentType: 'text/csv',
+      };
+    } else if (params.format === 'excel') {
+      const buffer = await ExportUtils.generateExcel(exportItems);
+      return {
+        data: buffer,
+        filename: `report-${Date.now()}.xlsx`,
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
+    } else {
+      const buffer = await ExportUtils.generatePdf(exportItems, title);
+      return {
+        data: buffer,
+        filename: `report-${Date.now()}.pdf`,
+        contentType: 'application/pdf',
+      };
+    }
   }
 
   /**
