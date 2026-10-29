@@ -183,6 +183,7 @@ export class AuthService {
       accountStatus: rider.accountStatus,
       isPhoneVerified: rider.isPhoneVerified,
       message: 'Registration submitted successfully. Please verify your phone number.',
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otpCode } : {}),
     };
   }
 
