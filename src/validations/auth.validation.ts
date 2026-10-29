@@ -40,6 +40,12 @@ export const verifyPhoneOtpSchema = z.object({
   code: z.string().min(4, 'Verification code must be at least 4 digits'),
 });
 
+export const resetPasswordPhoneSchema = z.object({
+  phoneNumber: z.string().min(8, 'Phone number must be at least 8 digits'),
+  code: z.string().min(4, 'Verification code must be at least 4 digits'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export const adminLoginSchema = z.object({
   email: z.string().email('Valid email is required'),
   password: z.string().min(1, 'Password is required'),

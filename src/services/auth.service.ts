@@ -316,6 +316,70 @@ export class AuthService {
   }
 
   /**
+   * Reset Password with Phone SMS OTP
+   */
+  static async resetPasswordWithOtp(phoneNumber: string, code: string, newPassword: string) {
+    const cleanPhone = phoneNumber.trim();
+    const cleanCode = code.trim();
+
+    const record = await prisma.phoneVerification.findFirst({
+      where: {
+        phoneNumber: cleanPhone,
+        code: cleanCode,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new Error('Invalid or expired verification code.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const rider = await prisma.rider.findFirst({
+      where: { phoneNumber: cleanPhone },
+    });
+
+    const customer = await prisma.customer.findFirst({
+      where: { phoneNumber: cleanPhone },
+    });
+
+    if (!rider && !customer) {
+      throw new Error('No account found associated with this phone number.');
+    }
+
+    if (rider) {
+      await prisma.rider.update({
+        where: { id: rider.id },
+        data: {
+          password: hashedPassword,
+          isPhoneVerified: true,
+        },
+      });
+    }
+
+    if (customer) {
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          password: hashedPassword,
+        },
+      });
+    }
+
+    await prisma.phoneVerification.update({
+      where: { id: record.id },
+      data: { isVerified: true },
+    });
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully. You can now log in with your new password.',
+    };
+  }
+
+  /**
    * Admin Login
    */
   static async loginAdmin(email: string, passwordPlain: string) {

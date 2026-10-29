@@ -12,13 +12,15 @@ import {
   updateFcmTokenSchema,
   sendPhoneOtpSchema,
   verifyPhoneOtpSchema,
+  resetPasswordPhoneSchema,
 } from '../validations/auth.validation';
 
 const router = Router();
 
-// Phone OTP verification (for Riders and Customers)
+// Phone OTP verification & Password Reset (for Riders and Customers)
 router.post('/phone/send-otp', validateRequest(sendPhoneOtpSchema), AuthController.sendPhoneOtp);
 router.post('/phone/verify-otp', validateRequest(verifyPhoneOtpSchema), AuthController.verifyPhoneOtp);
+router.post('/phone/reset-password', validateRequest(resetPasswordPhoneSchema), AuthController.resetPasswordPhone);
 
 // Customer Auth
 router.post('/register', validateRequest(customerRegisterSchema), AuthController.registerCustomer);

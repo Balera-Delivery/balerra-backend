@@ -90,6 +90,20 @@ export class AuthController {
     }
   }
 
+  static async resetPasswordPhone(req: Request, res: Response): Promise<void> {
+    try {
+      const { phoneNumber, code, newPassword } = req.body;
+      const result = await AuthService.resetPasswordWithOtp(phoneNumber, code, newPassword);
+      sendSuccess({
+        res,
+        message: result.message,
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
   static async loginAdmin(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
