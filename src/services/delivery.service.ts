@@ -297,12 +297,12 @@ export class DeliveryService {
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
-    // Notify Customer of rider assignment
+    // Notify Customer of rider dispatch
     NotificationService.sendNotification({
       role: Roles.CUSTOMER,
       recipientId: delivery.customerId,
-      title: 'Rider Assigned',
-      message: `Rider ${rider.fullName} (${rider.phoneNumber}) has been assigned to your order ${delivery.trackingCode}.`,
+      title: 'Rider Dispatched for Your Order',
+      message: `Rider ${rider.fullName} (${rider.phoneNumber}) has been assigned to order ${delivery.trackingCode} and is heading to pickup.`,
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
@@ -341,8 +341,17 @@ export class DeliveryService {
     NotificationService.sendNotification({
       role: Roles.CUSTOMER,
       recipientId: delivery.customerId,
-      title: 'Delivery Accepted',
-      message: `Rider ${delivery.rider?.fullName} accepted your delivery and is heading to pickup.`,
+      title: 'Rider Heading to Pickup',
+      message: `Rider ${delivery.rider?.fullName || 'Your rider'} accepted your delivery and is heading to pickup.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
+    }).catch(() => {});
+
+    // Notify Rider of confirmation
+    NotificationService.sendNotification({
+      role: Roles.RIDER,
+      recipientId: riderId,
+      title: 'Delivery Confirmed',
+      message: `You accepted order ${delivery.trackingCode}. Please proceed to pickup at: ${delivery.pickupLocation}`,
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
@@ -445,22 +454,30 @@ export class DeliveryService {
     });
 
     // Notification messages based on status
-    const statusMessages: Record<string, { title: string; body: string }> = {
+    const statusMessages: Record<string, { customerTitle: string; customerBody: string; riderTitle: string; riderBody: string }> = {
       ARRIVED_AT_PICKUP: {
-        title: 'Rider Arrived at Pickup',
-        body: `Rider has arrived at the pickup location (${delivery.pickupLocation}).`,
+        customerTitle: 'Rider Arrived at Pickup',
+        customerBody: `Your rider has arrived at the pickup location (${delivery.pickupLocation}).`,
+        riderTitle: 'Arrived at Pickup',
+        riderBody: `You arrived at ${delivery.pickupLocation}. Confirm package details before departure.`,
       },
       PICKED_UP: {
-        title: 'Package Picked Up',
-        body: `Your package for ${delivery.receiverName} has been picked up.`,
+        customerTitle: 'Package Picked Up',
+        customerBody: `Your package for ${delivery.receiverName} has been picked up and is on the way.`,
+        riderTitle: 'Package Picked Up',
+        riderBody: `Package collected. Head to destination: ${delivery.destination} (Recipient: ${delivery.receiverName}).`,
       },
       ON_THE_WAY: {
-        title: 'Package On The Way',
-        body: `Your package is on the way to ${delivery.destination}.`,
+        customerTitle: 'Package On The Way',
+        customerBody: `Your package is on the way to ${delivery.destination}.`,
+        riderTitle: 'On The Way',
+        riderBody: `En route to ${delivery.destination}. Recipient: ${delivery.receiverName} (${delivery.receiverPhone}).`,
       },
       DELIVERED: {
-        title: 'Rider Arrived at Destination',
-        body: `Rider has arrived at ${delivery.destination}. Please provide your 6-digit OTP to complete delivery.`,
+        customerTitle: 'Rider Arrived at Destination',
+        customerBody: `Your rider has arrived at ${delivery.destination}. Please provide your 6-digit OTP code to complete delivery.`,
+        riderTitle: 'Arrived at Destination',
+        riderBody: `You arrived at ${delivery.destination}. Ask recipient ${delivery.receiverName} for the 6-digit OTP or scan their QR code.`,
       },
     };
 
@@ -469,15 +486,26 @@ export class DeliveryService {
       NotificationService.sendNotification({
         role: Roles.CUSTOMER,
         recipientId: delivery.customerId,
-        title: statusMessages[nextStatus].title,
-        message: statusMessages[nextStatus].body,
+        title: statusMessages[nextStatus].customerTitle,
+        message: statusMessages[nextStatus].customerBody,
         metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus },
       }).catch(() => {});
 
+      // Notify Rider
+      if (delivery.riderId) {
+        NotificationService.sendNotification({
+          role: Roles.RIDER,
+          recipientId: delivery.riderId,
+          title: statusMessages[nextStatus].riderTitle,
+          message: statusMessages[nextStatus].riderBody,
+          metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus },
+        }).catch(() => {});
+      }
+
       // Notify Admins
       NotificationService.notifyAdmins(
-        statusMessages[nextStatus].title,
-        `Order ${delivery.trackingCode} (${delivery.customer?.fullName}): ${statusMessages[nextStatus].body}`,
+        statusMessages[nextStatus].customerTitle,
+        `Order ${delivery.trackingCode} (${delivery.customer?.fullName}): ${statusMessages[nextStatus].customerBody}`,
         { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus }
       ).catch(() => {});
     }
@@ -534,6 +562,15 @@ export class DeliveryService {
       recipientId: delivery.customerId,
       title: 'Delivery Completed! 🎉',
       message: `Your package (${delivery.trackingCode}) has been safely delivered and confirmed.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
+    }).catch(() => {});
+
+    // Notify Rider
+    NotificationService.sendNotification({
+      role: Roles.RIDER,
+      recipientId: riderId,
+      title: 'Delivery Completed! 💰',
+      message: `Order ${delivery.trackingCode} completed successfully. Delivery fee credited to your earnings.`,
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
@@ -605,6 +642,15 @@ export class DeliveryService {
       recipientId: delivery.customerId,
       title: 'Delivery Completed! 🎉',
       message: `Your package (${delivery.trackingCode}) has been safely handed over via QR scan.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
+    }).catch(() => {});
+
+    // Notify Rider
+    NotificationService.sendNotification({
+      role: Roles.RIDER,
+      recipientId: delivery.riderId || riderId,
+      title: 'Delivery Completed! 💰',
+      message: `Order ${delivery.trackingCode} completed successfully via QR scan. Delivery fee credited to your earnings.`,
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 

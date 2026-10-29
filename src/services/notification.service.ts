@@ -33,6 +33,8 @@ export class NotificationService {
 
     if (role === Roles.CUSTOMER) {
       notificationData.customerId = recipientId;
+      notificationData.riderId = null;
+      notificationData.adminId = null;
       const customer = await prisma.customer.findUnique({
         where: { id: recipientId },
         select: { fcmToken: true },
@@ -40,6 +42,8 @@ export class NotificationService {
       fcmToken = customer?.fcmToken || null;
     } else if (role === Roles.RIDER) {
       notificationData.riderId = recipientId;
+      notificationData.customerId = null;
+      notificationData.adminId = null;
       const rider = await prisma.rider.findUnique({
         where: { id: recipientId },
         select: { fcmToken: true },
@@ -47,6 +51,8 @@ export class NotificationService {
       fcmToken = rider?.fcmToken || null;
     } else if (role === Roles.ADMIN) {
       notificationData.adminId = recipientId;
+      notificationData.customerId = null;
+      notificationData.riderId = null;
       const admin = await prisma.admin.findUnique({
         where: { id: recipientId },
         select: { fcmToken: true },
@@ -138,7 +144,7 @@ export class NotificationService {
    */
   static async getUserNotifications(userId: string, role: RoleType, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: any = { userRole: role };
 
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
@@ -161,7 +167,7 @@ export class NotificationService {
    * Mark single notification as read
    */
   static async markAsRead(notificationId: string, userId: string, role: RoleType) {
-    const where: any = { id: notificationId };
+    const where: any = { id: notificationId, userRole: role };
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
     else if (role === Roles.ADMIN) where.adminId = userId;
@@ -176,7 +182,7 @@ export class NotificationService {
    * Mark all notifications as read for current user
    */
   static async markAllAsRead(userId: string, role: RoleType) {
-    const where: any = {};
+    const where: any = { userRole: role, isRead: false };
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
     else if (role === Roles.ADMIN) where.adminId = userId;
@@ -191,7 +197,7 @@ export class NotificationService {
    * Delete single notification
    */
   static async deleteNotification(notificationId: string, userId: string, role: RoleType) {
-    const where: any = { id: notificationId };
+    const where: any = { id: notificationId, userRole: role };
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
     else if (role === Roles.ADMIN) where.adminId = userId;
@@ -205,7 +211,7 @@ export class NotificationService {
    * Clear all notifications for current user
    */
   static async clearAllNotifications(userId: string, role: RoleType) {
-    const where: any = {};
+    const where: any = { userRole: role };
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
     else if (role === Roles.ADMIN) where.adminId = userId;
