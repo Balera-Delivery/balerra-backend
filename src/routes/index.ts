@@ -4,6 +4,7 @@ import customerRoutes from './customer.routes';
 import riderRoutes from './rider.routes';
 import adminRoutes from './admin.routes';
 import notificationRoutes from './notification.routes';
+import promotionRoutes from './promotion.routes';
 import { RestaurantController } from '../controllers/restaurant.controller';
 
 const router = Router();
@@ -28,5 +29,6 @@ router.use('/customer', customerRoutes);
 router.use('/rider', riderRoutes);
 router.use('/admin', adminRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/promotions', promotionRoutes);
 
 export default router;

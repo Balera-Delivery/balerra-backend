@@ -129,6 +129,7 @@ model Restaurant {
   updatedAt    DateTime   @updatedAt
   foods        FoodItem[]
   orders       Order[]
+  promotions   Promotion[]
 
   @@map("restaurants")
 }
@@ -294,4 +295,55 @@ model PhoneVerification {
   createdAt   DateTime @default(now())
 
   @@map("phone_verifications")
+}
+
+enum PromotionType {
+  PROMO_CODE
+  FREE_DELIVERY
+  PARTNER_DISCOUNT
+  PLATFORM_AUTOMATIC
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model Promotion {
+  id               String        @id @default(uuid())
+  code             String        @unique
+  title            String
+  description      String?       @db.Text
+  promotionType    PromotionType @default(PROMO_CODE)
+  discountType     DiscountType  @default(PERCENTAGE)
+  discountValue    Float
+  maxDiscount      Float?
+  minOrderAmount   Float         @default(0.0)
+  totalUsageLimit  Int?
+  usedCount        Int           @default(0)
+  perUserLimit     Int           @default(1)
+  startDate        DateTime      @default(now())
+  endDate          DateTime?
+  isActive         Boolean       @default(true)
+  applicableType   String        @default("ALL") // ALL, FOOD_ONLY, PACKAGE_ONLY, PARTNER_ONLY
+  restaurantId     String?
+  restaurant       Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  redemptions      PromotionRedemption[]
+
+  @@map("promotions")
+}
+
+model PromotionRedemption {
+  id              String    @id @default(uuid())
+  promotionId     String
+  customerId      String
+  orderId         String?
+  discountApplied Float
+  createdAt       DateTime  @default(now())
+
+  promotion       Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@map("promotion_redemptions")
 }
