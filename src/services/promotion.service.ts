@@ -16,6 +16,7 @@ export interface CreatePromotionDto {
   endDate?: string | Date;
   isActive?: boolean;
   applicableType?: string; // ALL, FOOD_ONLY, PACKAGE_ONLY, PARTNER_ONLY
+  fundedBy?: string; // PLATFORM, RESTAURANT, SPLIT_50_50
   restaurantId?: string;
 }
 
@@ -123,6 +124,7 @@ export class PromotionService {
         endDate: data.endDate ? new Date(data.endDate) : null,
         isActive: data.isActive !== undefined ? data.isActive : true,
         applicableType: data.applicableType || 'ALL',
+        fundedBy: data.fundedBy || 'PLATFORM',
         restaurantId: data.restaurantId || null
       },
       include: {
@@ -320,7 +322,8 @@ export class PromotionService {
         discountType: promo.discountType,
         discountValue: promo.discountValue,
         maxDiscount: promo.maxDiscount,
-        minOrderAmount: promo.minOrderAmount
+        minOrderAmount: promo.minOrderAmount,
+        fundedBy: promo.fundedBy
       }
     };
   }

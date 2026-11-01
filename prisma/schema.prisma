@@ -326,6 +326,7 @@ model Promotion {
   endDate          DateTime?
   isActive         Boolean       @default(true)
   applicableType   String        @default("ALL") // ALL, FOOD_ONLY, PACKAGE_ONLY, PARTNER_ONLY
+  fundedBy         String        @default("PLATFORM") // PLATFORM, RESTAURANT, SPLIT_50_50
   restaurantId     String?
   restaurant       Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   createdAt        DateTime      @default(now())
