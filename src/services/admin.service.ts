@@ -5,6 +5,7 @@ import { NotificationService } from './notification.service';
 import { Roles } from '../constants/roles';
 import { calculateDistanceKm } from '../utils/distance';
 import { ExportUtils, DeliveryExportItem } from '../utils/export.utils';
+import { broadcastRiderApproval } from '../socket';
 
 export class AdminService {
   /**
@@ -351,6 +352,13 @@ export class AdminService {
       message: 'Your rider account has been approved by admin. You can now log in and go online.',
     }).catch(() => {});
 
+    broadcastRiderApproval(riderId, {
+      riderId,
+      status: 'ACTIVE',
+      title: 'Account Approved! 🎉',
+      message: 'Your rider account has been approved by admin. You can now log in and go online.',
+    });
+
     return updated;
   }
 
@@ -358,7 +366,7 @@ export class AdminService {
    * Rider Management: Suspend or Activate
    */
   static async setRiderStatus(riderId: string, status: AccountStatus) {
-    return prisma.rider.update({
+    const updated = await prisma.rider.update({
       where: { id: riderId },
       data: {
         accountStatus: status,
@@ -373,6 +381,30 @@ export class AdminService {
         availabilityStatus: true,
       },
     });
+
+    if (status === 'ACTIVE') {
+      NotificationService.sendNotification({
+        role: Roles.RIDER,
+        recipientId: riderId,
+        title: 'Account Activated! 🎉',
+        message: 'Your rider account is active. You can now log in and accept delivery requests.',
+      }).catch(() => {});
+      broadcastRiderApproval(riderId, {
+        riderId,
+        status: 'ACTIVE',
+        title: 'Account Activated! 🎉',
+        message: 'Your rider account is active. You can now log in and accept delivery requests.',
+      });
+    } else if (status === 'SUSPENDED') {
+      NotificationService.sendNotification({
+        role: Roles.RIDER,
+        recipientId: riderId,
+        title: 'Account Suspended ⚠️',
+        message: 'Your rider account has been suspended by administration. Please contact support.',
+      }).catch(() => {});
+    }
+
+    return updated;
   }
 
   /**

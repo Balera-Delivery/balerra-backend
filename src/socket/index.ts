@@ -105,6 +105,14 @@ export const initSocketServer = async (httpServer: HttpServer): Promise<Server> 
       }
     });
 
+    // 5. Rider joins their personal room for push/status updates
+    socket.on('rider:join', ({ riderId }: { riderId: string }) => {
+      if (riderId) {
+        socket.join(`room:rider:${riderId}`);
+        console.log(`[Socket.io] Rider ${riderId} joined personal room: room:rider:${riderId}`);
+      }
+    });
+
     socket.on('disconnect', (reason) => {
       // Clean disconnect
     });
@@ -135,4 +143,30 @@ export const broadcastDeliveryStatus = (payload: DeliveryStatusPayload): void =>
 export const broadcastAdminNotification = (payload: AdminNotificationPayload): void => {
   if (!io) return;
   io.to('room:admin').emit('admin:notification', payload);
+};
+
+/**
+ * Broadcast account approval directly to the rider's active socket
+ */
+export const broadcastRiderApproval = (riderId: string, payload: any): void => {
+  if (!io) return;
+  io.to(`room:rider:${riderId}`).emit('rider:approved', payload);
+  io.emit(`rider:${riderId}:approved`, payload);
+};
+
+/**
+ * Broadcast notification to a specific rider
+ */
+export const broadcastRiderNotification = (payload: {
+  riderId: string;
+  id?: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  userRole?: string;
+  metadata?: Record<string, any>;
+}): void => {
+  if (!io) return;
+  io.to(`room:rider:${payload.riderId}`).emit('rider:notification', payload);
+  io.emit(`rider:${payload.riderId}:notification`, payload);
 };

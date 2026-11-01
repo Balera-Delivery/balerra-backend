@@ -2,7 +2,7 @@ import { prisma } from '../config/prisma';
 import { firebaseApp } from '../config/firebase';
 import { RoleType, Roles } from '../constants/roles';
 import { queuePushNotification } from '../queues/notification.queue';
-import { broadcastAdminNotification } from '../socket';
+import { broadcastAdminNotification, broadcastRiderNotification } from '../socket';
 
 export interface CreateNotificationParams {
   role: RoleType;
@@ -66,7 +66,7 @@ export class NotificationService {
       data: notificationData,
     });
 
-    // If notification is for Admin, broadcast immediately to Admin WebSockets
+    // Broadcast immediately to WebSockets
     if (role === Roles.ADMIN) {
       broadcastAdminNotification({
         id: savedNotification.id,
@@ -74,6 +74,16 @@ export class NotificationService {
         message: savedNotification.message,
         createdAt: savedNotification.createdAt.toISOString(),
         userRole: Roles.ADMIN,
+        metadata: savedNotification.metadata as Record<string, any>,
+      });
+    } else if (role === Roles.RIDER) {
+      broadcastRiderNotification({
+        riderId: recipientId,
+        id: savedNotification.id,
+        title: savedNotification.title,
+        message: savedNotification.message,
+        createdAt: savedNotification.createdAt.toISOString(),
+        userRole: Roles.RIDER,
         metadata: savedNotification.metadata as Record<string, any>,
       });
     }

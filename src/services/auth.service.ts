@@ -190,6 +190,7 @@ export class AuthService {
     phoneNumber: string;
     password: string;
     vehicleInfo?: string;
+    fcmToken?: string;
   }) {
     if (data.email && data.email.trim() !== '') {
       const existingEmail = await prisma.rider.findUnique({
@@ -225,6 +226,7 @@ export class AuthService {
         accountStatus: 'PENDING_APPROVAL',
         availabilityStatus: 'OFFLINE',
         isPhoneVerified: false,
+        fcmToken: data.fcmToken || null,
       },
     });
 
@@ -305,16 +307,7 @@ export class AuthService {
     }
 
     if (rider.accountStatus === 'PENDING_APPROVAL') {
-      if (rider.isPhoneVerified || process.env.NODE_ENV !== 'production') {
-        // Auto-activate verified rider in non-production or upon OTP verification
-        await prisma.rider.update({
-          where: { id: rider.id },
-          data: { accountStatus: 'ACTIVE' },
-        });
-        rider.accountStatus = 'ACTIVE';
-      } else {
-        throw new Error('Your account is pending admin approval. You will be notified once activated.');
-      }
+      throw new Error('Your rider account is pending admin approval. You will receive a notification once an administrator approves your account.');
     }
 
     if (rider.accountStatus === 'SUSPENDED') {
@@ -401,15 +394,15 @@ export class AuthService {
       data: { isVerified: true },
     });
 
-    // Mark rider as verified and active
+    // Mark rider phone as verified, but retain PENDING_APPROVAL until admin approves
     await prisma.rider.updateMany({
       where: { phoneNumber: { in: candidates } },
-      data: { isPhoneVerified: true, accountStatus: 'ACTIVE' },
+      data: { isPhoneVerified: true },
     });
 
     return {
       success: true,
-      message: 'Phone number verified successfully.',
+      message: 'Phone number verified successfully. Your application is now pending admin approval.',
     };
   }
 

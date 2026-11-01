@@ -6,6 +6,7 @@ export const customerRegisterSchema = z.object({
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   address: z.string().optional(),
+  fcmToken: z.string().optional(),
 });
 
 export const customerLoginSchema = z.object({
@@ -19,6 +20,7 @@ export const riderRegisterSchema = z.object({
   phoneNumber: z.string().min(8, 'Phone number must be at least 8 digits'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   vehicleInfo: z.string().optional(),
+  fcmToken: z.string().optional(),
 });
 
 export const riderLoginSchema = z.object({
