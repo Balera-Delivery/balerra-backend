@@ -13,4 +13,8 @@ export const env = {
   DEFAULT_ADMIN_EMAIL: process.env.DEFAULT_ADMIN_EMAIL || 'admin@balera.com',
   DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || 'AdminPassword@123',
   DEFAULT_ADMIN_NAME: process.env.DEFAULT_ADMIN_NAME || 'Super Administrator',
+  REDIS_HOST: process.env.REDIS_HOST || '127.0.0.1',
+  REDIS_PORT: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379,
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || undefined,
+  REDIS_URL: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
 };

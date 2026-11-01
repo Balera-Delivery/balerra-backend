@@ -1,6 +1,8 @@
 import { prisma } from '../config/prisma';
-import { firebaseApp, firebaseAdmin } from '../config/firebase';
+import { firebaseApp } from '../config/firebase';
 import { RoleType, Roles } from '../constants/roles';
+import { queuePushNotification } from '../queues/notification.queue';
+import { broadcastAdminNotification } from '../socket';
 
 export interface CreateNotificationParams {
   role: RoleType;
@@ -64,23 +66,30 @@ export class NotificationService {
       data: notificationData,
     });
 
-    // 2. Dispatch FCM Push Notification if Firebase is initialized and token is available
-    if (firebaseApp && fcmToken) {
-      try {
-        await firebaseAdmin.messaging().send({
-          token: fcmToken,
-          notification: {
-            title,
-            body: message,
-          },
-          data: metadata ? Object.fromEntries(
-            Object.entries(metadata).map(([k, v]) => [k, String(v)])
-          ) : {},
-        });
-        console.log(`[Notification] FCM push sent to ${role} (${recipientId})`);
-      } catch (err) {
-        console.error(`[Notification] Failed to send FCM push to ${recipientId}:`, err);
-      }
+    // If notification is for Admin, broadcast immediately to Admin WebSockets
+    if (role === Roles.ADMIN) {
+      broadcastAdminNotification({
+        id: savedNotification.id,
+        title: savedNotification.title,
+        message: savedNotification.message,
+        createdAt: savedNotification.createdAt.toISOString(),
+        userRole: Roles.ADMIN,
+        metadata: savedNotification.metadata as Record<string, any>,
+      });
+    }
+
+    // 2. Dispatch FCM Push Notification via BullMQ background queue (with automatic fallback)
+    if (fcmToken) {
+      queuePushNotification({
+        token: fcmToken,
+        title,
+        body: message,
+        data: metadata ? Object.fromEntries(
+          Object.entries(metadata).map(([k, v]) => [k, String(v)])
+        ) : undefined,
+      }).catch((err) => {
+        console.error(`[Notification Queue] Failed to queue FCM push to ${recipientId}:`, err);
+      });
     }
 
     return savedNotification;

@@ -4,6 +4,7 @@ import { OtpService } from './otp.service';
 import { NotificationService } from './notification.service';
 import { Roles } from '../constants/roles';
 import { DeliveryStatus } from '@prisma/client';
+import { broadcastDeliveryStatus } from '../socket';
 
 export class DeliveryService {
   /**
@@ -355,6 +356,14 @@ export class DeliveryService {
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
+
     return updated;
   }
 
@@ -393,6 +402,14 @@ export class DeliveryService {
       `Rider ${delivery.rider?.fullName} rejected assignment for order ${delivery.trackingCode}. Returned to pending queue.`,
       { deliveryId: delivery.id, trackingCode: delivery.trackingCode }
     ).catch(() => {});
+
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
 
     return updated;
   }
@@ -510,6 +527,14 @@ export class DeliveryService {
       ).catch(() => {});
     }
 
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
+
     return updated;
   }
 
@@ -580,6 +605,14 @@ export class DeliveryService {
       `Order ${delivery.trackingCode} successfully delivered by ${delivery.rider?.fullName}.`,
       { deliveryId: delivery.id }
     ).catch(() => {});
+
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
 
     return updated;
   }
@@ -661,6 +694,14 @@ export class DeliveryService {
       { deliveryId: delivery.id }
     ).catch(() => {});
 
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
+
     return updated;
   }
 
@@ -735,6 +776,14 @@ export class DeliveryService {
         metadata: { deliveryId: delivery.id },
       }).catch(() => {});
     }
+
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
 
     return updated;
   }
@@ -1048,6 +1097,14 @@ export class DeliveryService {
         data: { paymentStatus },
       });
     }
+
+    // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
 
     return updated;
   }

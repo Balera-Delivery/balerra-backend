@@ -3,6 +3,7 @@ import { RiderController } from '../controllers/rider.controller';
 import { authenticateJwt } from '../middleware/auth.middleware';
 import { authorizeRole } from '../middleware/role.middleware';
 import { validateRequest } from '../middleware/validate.middleware';
+import { idempotencyMiddleware } from '../middleware/idempotency.middleware';
 import { Roles } from '../constants/roles';
 import {
   updateRiderProfileSchema,
@@ -25,7 +26,7 @@ router.put('/location', validateRequest(updateRiderLocationSchema), RiderControl
 // Assigned Deliveries & Actions
 router.get('/assigned', RiderController.getAssignedDeliveries);
 router.get('/active', RiderController.getActiveDelivery);
-router.post('/deliveries/:id/accept', RiderController.acceptDelivery);
+router.post('/deliveries/:id/accept', idempotencyMiddleware('rider_accept'), RiderController.acceptDelivery);
 router.post('/deliveries/:id/reject', RiderController.rejectDelivery);
 router.put('/deliveries/:id/status', validateRequest(updateDeliveryStatusSchema), RiderController.updateDeliveryStatus);
 router.put('/delivery-status', validateRequest(updateDeliveryStatusSchema), (req, res, next) => {
@@ -38,8 +39,8 @@ router.put('/delivery-status', validateRequest(updateDeliveryStatusSchema), (req
 });
 
 // OTP Verification to complete delivery
-router.post('/deliveries/:id/verify-otp', validateRequest(verifyOtpSchema), RiderController.verifyOtp);
-router.post('/verify-otp', validateRequest(verifyOtpSchema), (req, res, next) => {
+router.post('/deliveries/:id/verify-otp', idempotencyMiddleware('rider_verify'), validateRequest(verifyOtpSchema), RiderController.verifyOtp);
+router.post('/verify-otp', idempotencyMiddleware('rider_verify'), validateRequest(verifyOtpSchema), (req, res, next) => {
   // Support both /verify-otp?id=xxx or /deliveries/:id/verify-otp
   if (req.query.id) {
     req.params.id = req.query.id as string;
@@ -49,8 +50,8 @@ router.post('/verify-otp', validateRequest(verifyOtpSchema), (req, res, next) =>
 });
 
 // QR Code Verification to complete delivery
-router.post('/deliveries/:id/verify-qr', RiderController.verifyQr);
-router.post('/verify-qr', (req, res, next) => {
+router.post('/deliveries/:id/verify-qr', idempotencyMiddleware('rider_verify'), RiderController.verifyQr);
+router.post('/verify-qr', idempotencyMiddleware('rider_verify'), (req, res, next) => {
   if (req.query.id) {
     (req.params as any).id = req.query.id as string;
     return RiderController.verifyQr(req, res);
