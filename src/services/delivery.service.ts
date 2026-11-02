@@ -213,6 +213,14 @@ export class DeliveryService {
       { deliveryId: delivery.id, trackingCode: delivery.trackingCode }
     ).catch(() => {});
 
+    // Broadcast delivery status to admin room and live map tracking via WebSockets
+    broadcastDeliveryStatus({
+      deliveryId: delivery.id,
+      status: 'PENDING',
+      updatedAt: delivery.createdAt.toISOString(),
+      metadata: { trackingCode: delivery.trackingCode, customerId },
+    });
+
     // Notify Customer of submission
     NotificationService.sendNotification({
       role: Roles.CUSTOMER,
