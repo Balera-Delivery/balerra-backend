@@ -23,7 +23,7 @@ const startServer = async () => {
     await initSocketServer(httpServer);
 
     const PORT = env.PORT;
-    const server = httpServer.listen(PORT, () => {
+    const server = httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`====================================================`);
       console.log(`🚀 Balerra Delivery Backend API is running!`);
       console.log(`📡 URL: http://localhost:${PORT}`);
