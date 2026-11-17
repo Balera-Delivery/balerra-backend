@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { AdminService } from '../services/admin.service';
 import { DeliveryService } from '../services/delivery.service';
+import { AuthService } from '../services/auth.service';
 import { ReportService } from '../services/report.service';
 import { sendSuccess, sendError } from '../utils/apiResponse';
 import { HttpStatus } from '../constants/httpCodes';
@@ -165,6 +166,32 @@ export class AdminController {
     }
   }
 
+  static async setRiderAvailability(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const riderId = String(req.params.id);
+      const status = String(req.body?.status || '').toUpperCase();
+      if (status !== 'ONLINE' && status !== 'OFFLINE') {
+        throw new Error('Status must be ONLINE or OFFLINE.');
+      }
+      const rider = await AdminService.setRiderAvailability(riderId, status);
+      sendSuccess({ res, message: `Rider is now ${status === 'ONLINE' ? 'online' : 'offline'}.`, data: rider });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async resetRiderPassword(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const riderId = String(req.params.id);
+      const password = String(req.body?.password || '');
+      if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+      await AdminService.resetRiderPassword(riderId, password);
+      sendSuccess({ res, message: 'Rider password updated.', data: { id: riderId } });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
   static async toggleRiderDeactivation(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const riderId = String(req.params.id);
@@ -202,6 +229,15 @@ export class AdminController {
         message: 'Rider payouts summary retrieved.',
         data: result,
       });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async getPayoutHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const result = await AdminService.getPayoutHistory();
+      sendSuccess({ res, message: 'Payout history retrieved.', data: result });
     } catch (error: any) {
       sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
     }
@@ -303,6 +339,31 @@ export class AdminController {
       const { reason } = req.body;
       const result = await DeliveryService.cancelDelivery(deliveryId, adminId, Roles.ADMIN, reason);
       sendSuccess({ res, message: 'Delivery cancelled successfully by admin.', data: result });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  /** PATCH /admin/deliveries/:id/status: admin moves a delivery forward (support override). */
+  static async overrideDeliveryStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const adminId = req.user!.userId;
+      const deliveryId = String(req.params.id);
+      // Accept "Picked Up" / "On the Way" (admin labels) as well as PICKED_UP / ON_THE_WAY
+      const status = String(req.body?.status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+      const notes = typeof req.body?.notes === 'string' ? req.body.notes.slice(0, 500) : undefined;
+      const result = await DeliveryService.adminOverrideStatus(deliveryId, adminId, status as any, notes);
+      sendSuccess({ res, message: `Delivery status changed to ${status}.`, data: result });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  /** DELETE /admin/customers/:id: removes the customer's personal data (orders are kept anonymously). */
+  static async deleteCustomer(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const result = await AuthService.adminDeleteCustomer(String(req.params.id));
+      sendSuccess({ res, message: 'Customer account deleted.', data: result });
     } catch (error: any) {
       sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
     }

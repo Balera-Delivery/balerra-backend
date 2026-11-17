@@ -129,6 +129,7 @@ model Restaurant {
   updatedAt    DateTime   @updatedAt
   foods        FoodItem[]
   orders       Order[]
+  orderItems   OrderItem[]
   promotions   Promotion[]
 
   @@map("restaurants")
@@ -157,10 +158,12 @@ model Order {
   id                  String      @id @default(uuid())
   orderNumber         String      @unique // e.g. ORD-2026-0001
   customerId          String
-  restaurantId        String
+  restaurantId        String      // Primary restaurant (first pickup). Multi-restaurant carts store each item's restaurant on OrderItem.
   deliveryId          String?     @unique
   subtotal            Float
   deliveryFee         Float       @default(60.0)
+  discount            Float       @default(0)
+  promoCode           String?
   totalAmount         Float
   status              OrderStatus @default(PENDING)
   paymentMethod       String      @default("CASH_ON_DELIVERY")
@@ -180,16 +183,19 @@ model Order {
 
 model OrderItem {
   id         String    @id @default(uuid())
-  orderId    String
-  foodItemId String?
-  name       String
-  price      Float
-  quantity   Int       @default(1)
-  subtotal   Float
-  notes      String?
+  orderId        String
+  foodItemId     String?
+  restaurantId   String?   // Restaurant this dish is picked up from (multi-restaurant carts)
+  restaurantName String?   // Snapshot of the restaurant name at order time
+  name           String
+  price          Float
+  quantity       Int       @default(1)
+  subtotal       Float
+  notes          String?
 
-  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  foodItem   FoodItem? @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+  order          Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  foodItem       FoodItem?   @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+  restaurant     Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
   @@map("order_items")
 }
@@ -214,6 +220,11 @@ model Delivery {
   paymentMethod       String               @default("CASH_ON_DELIVERY")
   paymentStatus       String               @default("PENDING")
   receiptUrl          String?              @db.Text
+  // Server-calculated price of the whole checkout (what the customer pays)
+  deliveryFee         Float?
+  discount            Float                @default(0)
+  promoCode           String?
+  totalAmount         Float?
   status              DeliveryStatus       @default(PENDING)
   cancellationReason  String?
   riderFee            Float?               @default(50.0)

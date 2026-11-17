@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { prisma } from '../config/prisma';
 import { generateTrackingCode } from '../utils/trackingCode';
 import { OtpService } from './otp.service';
@@ -5,6 +6,8 @@ import { NotificationService } from './notification.service';
 import { Roles } from '../constants/roles';
 import { DeliveryStatus } from '@prisma/client';
 import { broadcastDeliveryStatus } from '../socket';
+import { PricingService } from './pricing.service';
+import { PromotionService } from './promotion.service';
 
 export class DeliveryService {
   /**
@@ -35,7 +38,14 @@ export class DeliveryService {
     paymentMethod?: string;
     paymentStatus?: string;
     receiptUrl?: string;
+    promoCode?: string;
   }) {
+    // Current customer app: cart of catalog dishes (possibly several restaurants).
+    if (Array.isArray(data.items) && data.items.length > 0 && data.items.every((it) => !!it.foodItemId)) {
+      return this.createFoodCartDelivery(customerId, { ...data, items: data.items });
+    }
+
+    // Legacy path below: free-text food descriptions and package deliveries.
     const trackingCode = generateTrackingCode();
 
     // If restaurant identifier is passed, find matching restaurant
@@ -105,7 +115,12 @@ export class DeliveryService {
     const paymentMethod = data.paymentMethod || (data.receiptUrl ? 'DIGITAL_TRANSFER' : 'TELEBIRR');
     const paymentStatus = data.paymentStatus || (data.receiptUrl ? 'PAID_PENDING_VERIFICATION' : 'PENDING');
 
-    const qrCodeToken = `BALERA-${trackingCode}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Package deliveries are priced by the admin-set package fee (and optional promo).
+    const packageQuote = !isFood
+      ? await PricingService.quotePackage({ promoCode: data.promoCode, customerId, strictPromo: true })
+      : null;
+
+    const qrCodeToken = `BALERA-${trackingCode}-${randomBytes(9).toString('hex').toUpperCase()}`; // secure random, cannot be guessed
 
     const delivery = await prisma.delivery.create({
       data: {
@@ -126,6 +141,10 @@ export class DeliveryService {
         paymentMethod,
         paymentStatus,
         receiptUrl: data.receiptUrl || null,
+        deliveryFee: packageQuote?.deliveryFee ?? null,
+        discount: packageQuote?.discount ?? 0,
+        promoCode: packageQuote?.promoCode ?? null,
+        totalAmount: packageQuote?.total ?? null,
         status: 'PENDING',
         statusLogs: {
           create: {
@@ -203,6 +222,154 @@ export class DeliveryService {
       });
     }
 
+    if (packageQuote?.promotionId) {
+      await PromotionService.recordRedemption({
+        promotionId: packageQuote.promotionId,
+        customerId,
+        discountApplied: packageQuote.discount,
+      }).catch((err) => console.warn('[Promo] Failed to record redemption:', err.message));
+    }
+
+    return this.finalizeNewDelivery(delivery, customerId);
+  }
+
+  /**
+   * Create a food delivery from a cart of catalog dishes (dish IDs + quantities).
+   * Dishes may come from several restaurants: one delivery, one order, one payment,
+   * and each order item remembers the restaurant it is picked up from.
+   * All prices are calculated by PricingService from the database.
+   */
+  static async createFoodCartDelivery(customerId: string, data: {
+    destination: string;
+    destinationLatitude?: number;
+    destinationLongitude?: number;
+    receiverName: string;
+    receiverPhone: string;
+    specialInstructions?: string;
+    items: Array<{ foodItemId?: string; quantity?: number; notes?: string }>;
+    paymentMethod?: string;
+    receiptUrl?: string;
+    promoCode?: string;
+  }) {
+    const quote = await PricingService.quoteFood(
+      data.items.map((it) => ({ foodItemId: it.foodItemId!, quantity: it.quantity, notes: it.notes })),
+      { promoCode: data.promoCode, customerId, strictPromo: true }
+    );
+
+    const trackingCode = generateTrackingCode();
+    const qrCodeToken = `BALERA-${trackingCode}-${randomBytes(9).toString('hex').toUpperCase()}`; // secure random, cannot be guessed
+    const groups = quote.restaurants;
+    const firstStop = groups[0];
+
+    // Pickup text lists every restaurant so riders/admins see all stops.
+    const pickupLocation = groups.map((g) => `${g.name}, ${g.address}`).join(' | ');
+    const itemDescription = groups.length === 1
+      ? `Food Order from ${firstStop.name}: ${firstStop.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')}`
+      : `Food Order from ${groups.length} restaurants: ` +
+        groups.map((g) => `${g.name} (${g.items.map((i) => `${i.quantity}x ${i.name}`).join(', ')})`).join(' | ');
+
+    // Payment status is derived on the server; the client cannot mark an order as paid.
+    const paymentMethod = data.paymentMethod || (data.receiptUrl ? 'DIGITAL_TRANSFER' : 'TELEBIRR');
+    const paymentStatus = data.receiptUrl ? 'PAID_PENDING_VERIFICATION' : 'PENDING';
+
+    const delivery = await prisma.$transaction(async (tx) => {
+      const created = await tx.delivery.create({
+        data: {
+          trackingCode,
+          qrCodeToken,
+          customerId,
+          pickupLocation,
+          pickupLatitude: firstStop.latitude,
+          pickupLongitude: firstStop.longitude,
+          destination: data.destination,
+          destinationLatitude: data.destinationLatitude ?? null,
+          destinationLongitude: data.destinationLongitude ?? null,
+          itemType: 'Food',
+          itemDescription,
+          receiverName: data.receiverName,
+          receiverPhone: data.receiverPhone,
+          specialInstructions: data.specialInstructions || null,
+          paymentMethod,
+          paymentStatus,
+          receiptUrl: data.receiptUrl || null,
+          deliveryFee: quote.deliveryFee,
+          discount: quote.discount,
+          promoCode: quote.promoCode,
+          totalAmount: quote.total,
+          status: 'PENDING',
+          statusLogs: {
+            create: {
+              status: 'PENDING',
+              updatedBy: customerId,
+              notes: `Food order created from ${groups.map((g) => g.name).join(', ')}.${data.receiptUrl ? ' Payment receipt uploaded.' : ''}`,
+            },
+          },
+        },
+        include: {
+          customer: { select: { id: true, fullName: true, phoneNumber: true, email: true } },
+        },
+      });
+
+      const order = await tx.order.create({
+        data: {
+          orderNumber: await this.nextOrderNumber(tx),
+          customerId,
+          restaurantId: firstStop.restaurantId,
+          deliveryId: created.id,
+          subtotal: quote.subtotal,
+          deliveryFee: quote.deliveryFee,
+          discount: quote.discount,
+          promoCode: quote.promoCode,
+          totalAmount: quote.total,
+          status: 'PENDING',
+          paymentMethod,
+          paymentStatus,
+          receiptUrl: data.receiptUrl || null,
+          specialInstructions: data.specialInstructions || null,
+          items: {
+            create: groups.flatMap((g) =>
+              g.items.map((line) => ({
+                foodItemId: line.foodItemId,
+                restaurantId: g.restaurantId,
+                restaurantName: g.name,
+                name: line.name,
+                price: line.price,
+                quantity: line.quantity,
+                subtotal: line.subtotal,
+                notes: line.notes,
+              }))
+            ),
+          },
+        },
+      });
+
+      return { ...created, orderId: order.id };
+    });
+
+    if (quote.promotionId) {
+      await PromotionService.recordRedemption({
+        promotionId: quote.promotionId,
+        customerId,
+        orderId: delivery.orderId,
+        discountApplied: quote.discount,
+      }).catch((err) => console.warn('[Promo] Failed to record redemption:', err.message));
+    }
+
+    return this.finalizeNewDelivery(delivery, customerId);
+  }
+
+  /** Sequential order number (ORD-2026-01021). Unique index guards against rare collisions. */
+  private static async nextOrderNumber(tx: any): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await tx.order.count();
+    return `ORD-${year}-${String(count + 1001).padStart(5, '0')}`;
+  }
+
+  /** Shared steps after any new delivery: OTP, notifications, live update, full record. */
+  private static async finalizeNewDelivery(
+    delivery: { id: string; trackingCode: string; createdAt: Date; pickupLocation: string; customer: { fullName: string } },
+    customerId: string
+  ) {
     // Generate 6-digit OTP for delivery completion
     const otpCode = await OtpService.generateDeliveryOtp(delivery.id);
 
@@ -487,10 +654,10 @@ export class DeliveryService {
         riderBody: `You arrived at ${delivery.pickupLocation}. Confirm package details before departure.`,
       },
       PICKED_UP: {
-        customerTitle: 'Package Picked Up',
-        customerBody: `Your package for ${delivery.receiverName} has been picked up and is on the way.`,
-        riderTitle: 'Package Picked Up',
-        riderBody: `Package collected. Head to destination: ${delivery.destination} (Recipient: ${delivery.receiverName}).`,
+        customerTitle: 'Order Picked Up',
+        customerBody: `Your order has been picked up and is on the way to you.`,
+        riderTitle: 'Order Picked Up',
+        riderBody: `Order collected. Head to the drop-off: ${delivery.destination} (Recipient: ${delivery.receiverName}).`,
       },
       ON_THE_WAY: {
         customerTitle: 'Package On The Way',
@@ -541,6 +708,74 @@ export class DeliveryService {
       status: updated.status,
       updatedAt: updated.updatedAt.toISOString(),
       rider: (updated as any).rider ? { id: (updated as any).rider.id, fullName: (updated as any).rider.fullName } : (updated.riderId ? { id: updated.riderId } : undefined),
+    });
+
+    return updated;
+  }
+
+  /**
+   * Admin support override: move an assigned delivery forward when the rider app can't
+   * (e.g. the rider's phone died, or the customer can't read the OTP).
+   * Only forward steps are allowed. Assigning and cancelling have their own actions.
+   */
+  static async adminOverrideStatus(deliveryId: string, adminId: string, nextStatus: DeliveryStatus, notes?: string) {
+    const order: DeliveryStatus[] = ['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED', 'COMPLETED'];
+    const allowedTargets: DeliveryStatus[] = ['ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED', 'COMPLETED'];
+    if (!allowedTargets.includes(nextStatus)) {
+      throw new Error('Use "Assign Rider" to assign a delivery and "Cancel" to cancel it.');
+    }
+
+    const delivery = await prisma.delivery.findUnique({ where: { id: deliveryId }, include: { customer: true } });
+    if (!delivery) throw new Error('Delivery not found.');
+    if (!delivery.riderId) throw new Error('Assign a rider before changing the delivery status.');
+    if (delivery.status === 'CANCELLED' || delivery.status === 'COMPLETED') {
+      throw new Error(`This delivery is already ${delivery.status.toLowerCase()} and cannot be changed.`);
+    }
+    const from = order.indexOf(delivery.status as DeliveryStatus);
+    const to = order.indexOf(nextStatus);
+    if (from === -1 || to <= from) {
+      throw new Error(`A delivery can only move forward (it is ${delivery.status.replace(/_/g, ' ').toLowerCase()} now).`);
+    }
+
+    const note = `Changed by admin: ${notes?.trim() || 'support override'}`;
+    const updated = await prisma.delivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: nextStatus,
+        statusLogs: { create: { status: nextStatus, updatedBy: adminId, notes: note } },
+      },
+      include: { customer: true, rider: true },
+    });
+
+    if (nextStatus === 'COMPLETED') {
+      await prisma.order.updateMany({
+        where: { deliveryId: delivery.id },
+        data: { status: 'COMPLETED', paymentStatus: 'PAID' },
+      });
+    }
+
+    const label = nextStatus.replace(/_/g, ' ').toLowerCase();
+    const message = `Your delivery ${delivery.trackingCode} is now: ${label}.`;
+    NotificationService.sendNotification({
+      role: Roles.CUSTOMER,
+      recipientId: delivery.customerId,
+      title: nextStatus === 'COMPLETED' ? 'Delivery Completed! 🎉' : 'Delivery updated',
+      message,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus },
+    }).catch(() => {});
+    NotificationService.sendNotification({
+      role: Roles.RIDER,
+      recipientId: delivery.riderId,
+      title: 'Delivery updated by admin',
+      message: `Delivery ${delivery.trackingCode} was set to: ${label}.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode, status: nextStatus },
+    }).catch(() => {});
+
+    broadcastDeliveryStatus({
+      deliveryId: updated.id,
+      status: updated.status,
+      updatedAt: updated.updatedAt.toISOString(),
+      rider: updated.rider ? { id: updated.rider.id, fullName: updated.rider.fullName } : undefined,
     });
 
     return updated;
@@ -602,8 +837,8 @@ export class DeliveryService {
     NotificationService.sendNotification({
       role: Roles.RIDER,
       recipientId: riderId,
-      title: 'Delivery Completed! 💰',
-      message: `Order ${delivery.trackingCode} completed successfully. Delivery fee credited to your earnings.`,
+      title: 'Delivery Completed',
+      message: `Order ${delivery.trackingCode} completed successfully. Thank you!`,
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
@@ -690,8 +925,8 @@ export class DeliveryService {
     NotificationService.sendNotification({
       role: Roles.RIDER,
       recipientId: delivery.riderId || riderId,
-      title: 'Delivery Completed! 💰',
-      message: `Order ${delivery.trackingCode} completed successfully via QR scan. Delivery fee credited to your earnings.`,
+      title: 'Delivery Completed',
+      message: `Order ${delivery.trackingCode} completed successfully. Thank you!`,
       metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode },
     }).catch(() => {});
 
@@ -878,6 +1113,10 @@ export class DeliveryService {
                       price: true,
                     },
                   },
+                  // Pickup stop for this dish (multi-restaurant carts)
+                  restaurant: {
+                    select: { id: true, code: true, name: true, address: true, phone1: true, phone2: true, latitude: true, longitude: true },
+                  },
                 },
               },
             },
@@ -923,6 +1162,10 @@ export class DeliveryService {
             items: {
               include: {
                 foodItem: true,
+                // Pickup stop for this dish (multi-restaurant carts)
+                restaurant: {
+                  select: { id: true, code: true, name: true, address: true, phone1: true, phone2: true, latitude: true, longitude: true },
+                },
               },
             },
           },
@@ -1105,6 +1348,22 @@ export class DeliveryService {
         data: { paymentStatus },
       });
     }
+
+    // Tell the customer about the payment decision (push + in-app notification)
+    const normalized = paymentStatus.toUpperCase();
+    const isConfirmed = normalized.includes('VERIFIED') || normalized === 'PAID';
+    const isProblem = normalized.includes('REJECT') || normalized.includes('FAIL') || normalized.includes('INVALID');
+    NotificationService.sendNotification({
+      role: Roles.CUSTOMER,
+      recipientId: delivery.customerId,
+      title: isConfirmed ? 'Payment Confirmed ✅' : isProblem ? 'Payment Problem' : 'Payment Status Updated',
+      message: isConfirmed
+        ? `Your payment for order ${delivery.trackingCode} has been verified. We're arranging your rider now.`
+        : isProblem
+          ? `We couldn't verify your payment for order ${delivery.trackingCode}. Please check your receipt or contact support.`
+          : `The payment status of order ${delivery.trackingCode} is now: ${paymentStatus}.`,
+      metadata: { deliveryId: delivery.id, trackingCode: delivery.trackingCode, paymentStatus },
+    }).catch(() => {});
 
     // Broadcast status to Customer tracking room and Admin Dashboard via WebSockets
     broadcastDeliveryStatus({

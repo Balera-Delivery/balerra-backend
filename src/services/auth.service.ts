@@ -182,6 +182,88 @@ export class AuthService {
   }
 
   /**
+   * Permanently delete a customer account (Google Play account-deletion requirement).
+   *
+   * Personal data is removed; anonymous order/payment records are kept for accounting and
+   * rider payouts (deleting the Customer row would cascade-delete all deliveries and orders).
+   * - Requires the account password.
+   * - Refused while an order is still in progress.
+   * - The phone number is freed so the person can register again later.
+   */
+  static async deleteCustomerAccount(customerId: string, passwordPlain: string) {
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new Error('Account not found.');
+
+    const isMatch = await bcrypt.compare(passwordPlain || '', customer.password);
+    if (!isMatch) throw new Error('Incorrect password. Please try again.');
+
+    const activeCount = await prisma.delivery.count({
+      where: { customerId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+    });
+    if (activeCount > 0) {
+      throw new Error('You have an order in progress. Please wait until it is delivered or cancelled, then delete your account.');
+    }
+
+    return this.anonymizeCustomer(customer);
+  }
+
+  /**
+   * Admin deletes a customer account: same clean-up as self-deletion (personal data removed,
+   * anonymous order records kept), without the customer's password.
+   */
+  static async adminDeleteCustomer(customerId: string) {
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new Error('Customer not found.');
+    if (customer.phoneNumber.startsWith('deleted_')) throw new Error('This customer account was already deleted.');
+
+    const activeCount = await prisma.delivery.count({
+      where: { customerId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+    });
+    if (activeCount > 0) {
+      throw new Error('This customer has an order in progress. Finish or cancel it first, then delete the account.');
+    }
+
+    return this.anonymizeCustomer(customer);
+  }
+
+  private static async anonymizeCustomer(customer: { id: string; phoneNumber: string }) {
+    const customerId = customer.id;
+    const unusablePassword = await bcrypt.hash(`${customerId}:${Date.now()}:${Math.random()}`, 10);
+
+    await prisma.$transaction([
+      prisma.notification.deleteMany({ where: { customerId } }),
+      prisma.phoneVerification.deleteMany({ where: { phoneNumber: customer.phoneNumber } }),
+      // Past deliveries: remove receiver and address details, keep the anonymous record
+      prisma.delivery.updateMany({
+        where: { customerId },
+        data: {
+          receiverName: 'Deleted user',
+          receiverPhone: '',
+          destination: 'Address removed (account deleted)',
+          destinationLatitude: null,
+          destinationLongitude: null,
+          specialInstructions: null,
+        },
+      }),
+      prisma.order.updateMany({ where: { customerId }, data: { specialInstructions: null } }),
+      prisma.customer.update({
+        where: { id: customerId },
+        data: {
+          fullName: 'Deleted user',
+          phoneNumber: `deleted_${customerId}`, // frees the real number for a future sign-up
+          email: null,
+          address: null,
+          fcmToken: null,
+          password: unusablePassword,
+          status: 'SUSPENDED', // can never log in again
+        },
+      }),
+    ]);
+
+    return { deleted: true };
+  }
+
+  /**
    * Register a new Rider (Starts with PENDING_APPROVAL)
    */
   static async registerRider(data: {
@@ -507,6 +589,22 @@ export class AuthService {
   }
 
   /**
+   * Refresh Admin Session: a signed-in admin (valid token) gets a fresh token,
+   * so the admin dashboard stays signed in while it is used.
+   */
+  static async refreshAdminToken(userId: string, role: RoleType) {
+    if (role !== Roles.ADMIN) throw new Error('Only admins can refresh an admin session.');
+    const admin = await prisma.admin.findUnique({ where: { id: userId } });
+    if (!admin) throw new Error('Admin account not found. Please sign in again.');
+
+    const token = signToken({ userId: admin.id, role: Roles.ADMIN, email: admin.email });
+    return {
+      admin: { id: admin.id, fullName: admin.fullName, email: admin.email, role: admin.role },
+      token,
+    };
+  }
+
+  /**
    * Get Current User Profile (by Token info)
    */
   static async getMe(userId: string, role: RoleType) {
@@ -607,6 +705,15 @@ export class AuthService {
    * Update FCM Token
    */
   static async updateFcmToken(userId: string, role: RoleType, fcmToken: string) {
+    // A phone's token belongs to one account at a time: remove it from any other account first,
+    // so notifications never go to a previous user of the same phone.
+    if (fcmToken) {
+      await prisma.$transaction([
+        prisma.customer.updateMany({ where: { fcmToken, NOT: role === Roles.CUSTOMER ? { id: userId } : undefined }, data: { fcmToken: null } }),
+        prisma.rider.updateMany({ where: { fcmToken, NOT: role === Roles.RIDER ? { id: userId } : undefined }, data: { fcmToken: null } }),
+        prisma.admin.updateMany({ where: { fcmToken, NOT: role === Roles.ADMIN ? { id: userId } : undefined }, data: { fcmToken: null } }),
+      ]);
+    }
     if (role === Roles.CUSTOMER) {
       await prisma.customer.update({ where: { id: userId }, data: { fcmToken } });
     } else if (role === Roles.RIDER) {
@@ -615,5 +722,16 @@ export class AuthService {
       await prisma.admin.update({ where: { id: userId }, data: { fcmToken } });
     }
     return true;
+  }
+
+  /** Removes the account's push token (used on logout). */
+  static async clearFcmToken(userId: string, role: RoleType) {
+    if (role === Roles.CUSTOMER) {
+      await prisma.customer.update({ where: { id: userId }, data: { fcmToken: null } });
+    } else if (role === Roles.RIDER) {
+      await prisma.rider.update({ where: { id: userId }, data: { fcmToken: null } });
+    } else if (role === Roles.ADMIN) {
+      await prisma.admin.update({ where: { id: userId }, data: { fcmToken: null } });
+    }
   }
 }

@@ -36,6 +36,15 @@ export class RiderController {
     }
   }
 
+  static async getDeliveryById(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const delivery = await RiderService.getDeliveryForRider(req.user!.userId, String(req.params.id));
+      sendSuccess({ res, message: 'Delivery retrieved successfully.', data: delivery });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.NOT_FOUND, message: error.message });
+    }
+  }
+
   static async updateAvailability(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const riderId = req.user!.userId;

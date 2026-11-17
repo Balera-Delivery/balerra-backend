@@ -258,7 +258,7 @@ export class PromotionService {
     if (dto.orderAmount < promo.minOrderAmount) {
       return {
         valid: false,
-        message: `Order amount must be at least ${promo.minOrderAmount} Birr to use this promo code.`
+        message: `Order amount must be at least ETB ${promo.minOrderAmount} to use this promo code.`
       };
     }
 

@@ -4,6 +4,7 @@ import { authenticateJwt } from '../middleware/auth.middleware';
 import { authorizeRole } from '../middleware/role.middleware';
 import { validateRequest } from '../middleware/validate.middleware';
 import { idempotencyMiddleware } from '../middleware/idempotency.middleware';
+import { riderSafeResponse } from '../middleware/riderSafeResponse.middleware';
 import { Roles } from '../constants/roles';
 import {
   updateRiderProfileSchema,
@@ -14,8 +15,8 @@ import { updateDeliveryStatusSchema, verifyOtpSchema } from '../validations/deli
 
 const router = Router();
 
-// Guard all rider routes to authenticated RIDER role
-router.use(authenticateJwt, authorizeRole([Roles.RIDER]));
+// Guard all rider routes to authenticated RIDER role, and never send the customer's QR/OTP secrets
+router.use(authenticateJwt, authorizeRole([Roles.RIDER]), riderSafeResponse);
 
 // Status & Availability
 router.put('/status', validateRequest(updateRiderStatusSchema), RiderController.updateAvailability);
@@ -26,6 +27,7 @@ router.put('/location', validateRequest(updateRiderLocationSchema), RiderControl
 // Assigned Deliveries & Actions
 router.get('/assigned', RiderController.getAssignedDeliveries);
 router.get('/active', RiderController.getActiveDelivery);
+router.get('/deliveries/:id', RiderController.getDeliveryById);
 router.post('/deliveries/:id/accept', idempotencyMiddleware('rider_accept'), RiderController.acceptDelivery);
 router.post('/deliveries/:id/reject', RiderController.rejectDelivery);
 router.put('/deliveries/:id/status', validateRequest(updateDeliveryStatusSchema), RiderController.updateDeliveryStatus);

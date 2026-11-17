@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { NOTIFICATION_QUEUE_NAME, PushJobData, SmsJobData } from '../queues/notification.queue';
+import { NOTIFICATION_QUEUE_NAME, PushJobData, SmsJobData, buildPushMessage } from '../queues/notification.queue';
 import { getQueueRedisConnection } from '../queues/queue.config';
 import { firebaseApp, firebaseAdmin } from '../config/firebase';
 
@@ -15,14 +15,7 @@ export const startNotificationWorker = (): Worker => {
         case 'send-push': {
           const data: PushJobData = job.data;
           if (firebaseApp && data.token) {
-            await firebaseAdmin.messaging().send({
-              token: data.token,
-              notification: {
-                title: data.title,
-                body: data.body,
-              },
-              data: data.data || {},
-            });
+            await firebaseAdmin.messaging().send(buildPushMessage(data));
             console.log(`[Notification Worker] FCM push sent successfully (job #${job.id})`);
           }
           break;

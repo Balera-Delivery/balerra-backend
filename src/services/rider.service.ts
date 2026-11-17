@@ -1,6 +1,28 @@
 import { prisma } from '../config/prisma';
 import { RiderAvailability } from '@prisma/client';
 
+// What the rider app needs for each order: customer contact and every pickup restaurant with
+// its dishes (multi-restaurant carts). Prices and the customer's QR/OTP secrets are not included.
+const riderDeliveryInclude = {
+  customer: { select: { id: true, fullName: true, phoneNumber: true } },
+  order: {
+    select: {
+      id: true,
+      restaurant: { select: { id: true, name: true, phone1: true, address: true, latitude: true, longitude: true } },
+      items: {
+        select: {
+          name: true,
+          quantity: true,
+          notes: true,
+          restaurantId: true,
+          restaurantName: true,
+          restaurant: { select: { id: true, name: true, phone1: true, address: true, latitude: true, longitude: true } },
+        },
+      },
+    },
+  },
+} as const;
+
 export class RiderService {
   /**
    * Get Rider Profile
@@ -21,7 +43,36 @@ export class RiderService {
     });
 
     if (!rider) throw new Error('Rider profile not found.');
-    return rider;
+
+    // Real work numbers for the rider app (counted like the admin's Rider Payments page)
+    const done = await prisma.delivery.findMany({
+      where: { riderId, status: { in: ['DELIVERED', 'COMPLETED'] } },
+      select: { riderFee: true, isPaidToRider: true, updatedAt: true },
+    });
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const fee = (d: { riderFee: number | null }) => d.riderFee ?? 50;
+    const today = done.filter((d) => d.updatedAt >= startOfToday);
+    const assignedNow = await prisma.delivery.count({
+      where: { riderId, status: { in: ['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED'] } },
+    });
+    const totalEarnings = done.reduce((s, d) => s + fee(d), 0);
+    const totalPaid = done.filter((d) => d.isPaidToRider).reduce((s, d) => s + fee(d), 0);
+
+    // Support number riders call for help (Admin → Settings → General → Contact Phone Number)
+    const supportRow = await prisma.systemSetting.findUnique({ where: { key: 'companyPhone' } });
+
+    return {
+      ...rider,
+      supportPhone: supportRow?.value?.trim() || '',
+      todayAssigned: assignedNow,
+      todayCompleted: today.length,
+      todayEarnings: today.reduce((s, d) => s + fee(d), 0),
+      totalDeliveries: done.length,
+      totalEarnings,
+      totalPaid,
+      amountOwed: totalEarnings - totalPaid,
+    };
   }
 
   /**
@@ -124,11 +175,21 @@ export class RiderService {
           in: ['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED'],
         },
       },
-      include: {
-        customer: { select: { id: true, fullName: true, phoneNumber: true } },
-      },
+      include: riderDeliveryInclude,
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * One delivery of this rider (any status), for the details screen and live status checks
+   */
+  static async getDeliveryForRider(riderId: string, deliveryId: string) {
+    const delivery = await prisma.delivery.findFirst({
+      where: { riderId, OR: [{ id: deliveryId }, { trackingCode: deliveryId }] },
+      include: riderDeliveryInclude,
+    });
+    if (!delivery) throw new Error('Delivery not found.');
+    return delivery;
   }
 
   /**
@@ -142,9 +203,7 @@ export class RiderService {
           in: ['ASSIGNED', 'ACCEPTED', 'ARRIVED_AT_PICKUP', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED'],
         },
       },
-      include: {
-        customer: { select: { id: true, fullName: true, phoneNumber: true, address: true } },
-      },
+      include: riderDeliveryInclude,
       orderBy: { createdAt: 'desc' },
     });
   }

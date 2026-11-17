@@ -352,7 +352,8 @@ export class RestaurantService {
     page?: number;
     limit?: number;
   }) {
-    const { search, restaurantId, category, isAvailable, page = 1, limit = 100 } = options;
+    // Default limit is high enough to return the full menu (the customer app shows all dishes).
+    const { search, restaurantId, category, isAvailable, page = 1, limit = 500 } = options;
 
     const where: any = {};
 

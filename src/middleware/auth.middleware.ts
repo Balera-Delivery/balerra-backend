@@ -27,9 +27,18 @@ export const authenticateJwt = async (
 
   const token = authHeader.split(' ')[1];
 
+  // 1. The token itself: a bad or expired token means "sign in again" (401)
+  let decoded: TokenPayload;
   try {
-    const decoded = verifyToken(token);
+    decoded = verifyToken(token);
+  } catch (error) {
+    sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: 'Invalid or expired authentication token.' });
+    return;
+  }
 
+  // 2. The account: if the database is busy/unreachable this is a server problem (503),
+  //    NOT a reason to sign the user out
+  try {
     // Verify user exists and check active status
     if (decoded.role === Roles.CUSTOMER) {
       const customer = await prisma.customer.findUnique({ where: { id: decoded.userId } });
@@ -43,8 +52,12 @@ export const authenticateJwt = async (
       }
     } else if (decoded.role === Roles.RIDER) {
       const rider = await prisma.rider.findUnique({ where: { id: decoded.userId } });
-      if (!rider) {
+      if (!rider || rider.isDeleted) {
         sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: 'Rider not found.' });
+        return;
+      }
+      if (rider.isDeactivated) {
+        sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: 'Your rider account has been deactivated. Please contact Balera support.' });
         return;
       }
       if (rider.accountStatus === 'SUSPENDED') {
@@ -68,9 +81,8 @@ export const authenticateJwt = async (
   } catch (error) {
     sendError({
       res,
-      statusCode: HttpStatus.UNAUTHORIZED,
-      message: 'Invalid or expired authentication token.',
-      error,
+      statusCode: 503,
+      message: 'The server is busy right now. Please try again in a moment.',
     });
   }
 };

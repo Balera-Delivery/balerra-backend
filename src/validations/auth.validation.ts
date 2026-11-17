@@ -58,6 +58,10 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(6, 'New password must be at least 6 characters'),
 });
 
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, 'Please enter your password to confirm.'),
+});
+
 export const updateFcmTokenSchema = z.object({
   fcmToken: z.string().min(1, 'FCM token is required'),
 });

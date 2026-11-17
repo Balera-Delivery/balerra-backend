@@ -79,7 +79,8 @@ export class AdminService {
     const limit = params.limit && params.limit > 0 ? params.limit : 20;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    // Deleted accounts (personal data removed) are not listed
+    const where: any = { NOT: { phoneNumber: { startsWith: 'deleted_' } } };
     if (params.status) where.status = params.status;
     if (params.search && params.search.trim() !== '') {
       where.OR = [
@@ -474,6 +475,34 @@ export class AdminService {
   /**
    * Rider Management: Toggle Deactivation
    */
+  /**
+   * Rider Management: admin sets a rider Online / Offline (saved, so it survives refreshes).
+   * Only an active, not deactivated rider can be put online.
+   */
+  static async setRiderAvailability(riderId: string, status: 'ONLINE' | 'OFFLINE') {
+    const rider = await prisma.rider.findUnique({ where: { id: riderId } });
+    if (!rider || rider.isDeleted) throw new Error('Rider not found.');
+    if (status === 'ONLINE' && (rider.accountStatus !== 'ACTIVE' || rider.isDeactivated)) {
+      throw new Error('Only an active rider can be set online. Activate the rider first.');
+    }
+    return prisma.rider.update({
+      where: { id: riderId },
+      data: { availabilityStatus: status },
+      select: { id: true, fullName: true, accountStatus: true, availabilityStatus: true, isDeactivated: true },
+    });
+  }
+
+  /**
+   * Rider Management: admin sets a new password for a rider (e.g. the rider forgot it).
+   */
+  static async resetRiderPassword(riderId: string, newPassword: string) {
+    const rider = await prisma.rider.findUnique({ where: { id: riderId } });
+    if (!rider || rider.isDeleted) throw new Error('Rider not found.');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.rider.update({ where: { id: riderId }, data: { password: hashedPassword } });
+    return { id: riderId };
+  }
+
   static async toggleRiderDeactivation(riderId: string, isDeactivated: boolean) {
     const rider = await prisma.rider.findUnique({ where: { id: riderId } });
     if (!rider) throw new Error('Rider not found.');
@@ -576,6 +605,48 @@ export class AdminService {
         amountOwed,
       };
     });
+  }
+
+  /**
+   * Rider Payouts: every payout made (all riders), newest first.
+   * One payout = the deliveries settled together under one payout reference.
+   */
+  static async getPayoutHistory() {
+    const paid = await prisma.delivery.findMany({
+      where: { isPaidToRider: true, riderId: { not: null } },
+      orderBy: { riderPaidAt: 'desc' },
+      select: {
+        riderFee: true,
+        riderPaidAt: true,
+        payoutReference: true,
+        rider: { select: { id: true, fullName: true, phoneNumber: true } },
+      },
+    });
+
+    const groups = new Map<string, any>();
+    for (const d of paid) {
+      if (!d.rider) continue;
+      const ref = d.payoutReference || `UNREFERENCED-${d.rider.id}`;
+      const key = `${d.rider.id}::${ref}`;
+      const g = groups.get(key) || {
+        id: key,
+        reference: ref,
+        riderId: d.rider.id,
+        riderName: d.rider.fullName,
+        riderPhone: d.rider.phoneNumber,
+        amount: 0,
+        deliveriesCount: 0,
+        paidAt: d.riderPaidAt,
+      };
+      g.amount += d.riderFee ?? 50.0;
+      g.deliveriesCount += 1;
+      if (d.riderPaidAt && (!g.paidAt || d.riderPaidAt > g.paidAt)) g.paidAt = d.riderPaidAt;
+      groups.set(key, g);
+    }
+
+    return Array.from(groups.values()).sort(
+      (a, b) => new Date(b.paidAt || 0).getTime() - new Date(a.paidAt || 0).getTime()
+    );
   }
 
   /**
@@ -913,6 +984,17 @@ export class AdminService {
    * System Settings: Upsert Setting
    */
   static async setSetting(key: string, value: string) {
+    // Prices must be real amounts: a wrong value here would change every customer's checkout
+    if (key === 'delivery_fee' || key === 'extra_stop_fee') {
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount < 0 || amount > 10000) {
+        throw new Error('The fee must be a number between 0 and 10,000 ETB.');
+      }
+      if (key === 'delivery_fee' && amount === 0) {
+        throw new Error('The delivery fee cannot be 0. Use a promotion for free delivery.');
+      }
+      value = String(Math.round(amount * 100) / 100);
+    }
     return prisma.systemSetting.upsert({
       where: { key },
       update: { value },

@@ -17,7 +17,7 @@ async function runE2ETest() {
 
     // 1. Admin Login
     console.log('1️⃣ Testing Admin Authentication...');
-    const adminLogin = await AuthService.loginAdmin('admin@balera.com', 'AdminPassword@123');
+    const adminLogin = await AuthService.loginAdmin(process.env.DEFAULT_ADMIN_EMAIL || '', process.env.DEFAULT_ADMIN_PASSWORD || '');
     console.log('✅ Admin login succeeded. Admin ID:', adminLogin.admin.id);
 
     // 2. Customer Registration & Login

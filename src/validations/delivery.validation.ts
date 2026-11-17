@@ -18,16 +18,30 @@ export const createDeliverySchema = z.object({
   items: z.array(
     z.object({
       foodItemId: z.string().optional(),
-      name: z.string(),
+      // Name and price are ignored when foodItemId is given (server uses the database values)
+      name: z.string().optional().default(''),
       price: z.number().optional(),
-      quantity: z.number().int().positive().default(1),
-      notes: z.string().optional(),
+      quantity: z.number().int().positive().max(50).default(1),
+      notes: z.string().max(300).optional(),
     })
-  ).optional(),
+  ).max(100).optional(),
+  promoCode: z.string().max(50).optional(),
   // Payment and receipt upload fields
   paymentMethod: z.string().optional(),
   paymentStatus: z.string().optional(),
   receiptUrl: z.string().optional(),
+});
+
+// Checkout price quote: food cart (items) or package delivery (no items)
+export const checkoutQuoteSchema = z.object({
+  items: z.array(
+    z.object({
+      foodItemId: z.string().min(1, 'foodItemId is required'),
+      quantity: z.number().int().positive().max(50).default(1),
+      notes: z.string().max(300).optional(),
+    })
+  ).max(100).optional(),
+  promoCode: z.string().max(50).optional(),
 });
 
 export const uploadPaymentReceiptSchema = z.object({

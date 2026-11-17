@@ -11,8 +11,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('[Seed] Starting database seeding for Balerra Delivery Platform...');
 
-  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@balera.com';
-  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'AdminPassword@123';
+  // The first admin comes from .env (never a password written in the code)
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL;
+  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    throw new Error('[Seed] Set DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD in .env before seeding.');
+  }
   const adminName = process.env.DEFAULT_ADMIN_NAME || 'Super Administrator';
 
   // 1. Seed Super Admin
@@ -30,7 +34,7 @@ async function main() {
         role: 'SUPER_ADMIN',
       },
     });
-    console.log(`[Seed] Default Super Admin created: ${admin.email} / ${adminPassword}`);
+    console.log(`[Seed] Default Super Admin created: ${admin.email}`);
   } else {
     console.log(`[Seed] Super Admin (${adminEmail}) already exists.`);
   }
@@ -41,7 +45,8 @@ async function main() {
     { key: 'support_phone', value: '+251911000000' },
     { key: 'support_email', value: 'support@balera.com' },
     { key: 'currency', value: 'ETB' },
-    { key: 'base_delivery_fee', value: '60' },
+    { key: 'delivery_fee', value: '100' }, // one delivery fee for every order (admin can change it)
+    { key: 'extra_stop_fee', value: '30' },
     { key: 'operating_hours', value: '06:00 AM - 11:00 PM' },
   ];
 

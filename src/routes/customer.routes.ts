@@ -6,7 +6,7 @@ import { authorizeRole } from '../middleware/role.middleware';
 import { validateRequest } from '../middleware/validate.middleware';
 import { idempotencyMiddleware } from '../middleware/idempotency.middleware';
 import { Roles } from '../constants/roles';
-import { createDeliverySchema, cancelDeliverySchema, uploadPaymentReceiptSchema } from '../validations/delivery.validation';
+import { createDeliverySchema, cancelDeliverySchema, uploadPaymentReceiptSchema, checkoutQuoteSchema } from '../validations/delivery.validation';
 import { updateCustomerProfileSchema } from '../validations/customer.validation';
 import { createFoodOrderSchema } from '../validations/restaurant.validation';
 
@@ -14,6 +14,9 @@ const router = Router();
 
 // Guard all customer routes to authenticated CUSTOMER role
 router.use(authenticateJwt, authorizeRole([Roles.CUSTOMER]));
+
+// Checkout price quote (server-calculated totals shown at checkout)
+router.post('/quote', validateRequest(checkoutQuoteSchema), CustomerController.getCheckoutQuote);
 
 // Food Ordering & Restaurant Browsing for Authenticated Customer
 router.get('/restaurants', RestaurantController.getCustomerRestaurants);

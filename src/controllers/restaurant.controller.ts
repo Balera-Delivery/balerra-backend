@@ -218,7 +218,9 @@ export class RestaurantController {
     try {
       const { search, restaurantId, category, isAvailable } = req.query;
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
+      // Default returns the full menu; the cap protects the server from huge requests.
+      const requestedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : 500;
+      const limit = Math.min(Math.max(requestedLimit || 500, 1), 1000);
 
       const parsedIsAvailable = isAvailable !== undefined ? isAvailable === 'true' : undefined;
 

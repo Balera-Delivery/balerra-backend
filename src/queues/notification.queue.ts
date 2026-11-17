@@ -2,6 +2,7 @@ import { Queue } from 'bullmq';
 import { getQueueRedisConnection, defaultJobOptions } from './queue.config';
 import { isRedisReady } from '../config/redis';
 import { firebaseApp, firebaseAdmin } from '../config/firebase';
+import type { messaging } from 'firebase-admin';
 
 export const NOTIFICATION_QUEUE_NAME = 'notifications';
 
@@ -22,6 +23,24 @@ export interface AdminBroadcastJobData {
   message: string;
   metadata?: Record<string, any>;
 }
+
+/**
+ * Builds the FCM message for a push notification.
+ *
+ * Data-only + high priority: the mobile app receives it even when closed and builds the
+ * notification itself, so it can show the Balera Delivery logo and pop up as a heads-up
+ * notification ("Order updates" channel). Title/body travel inside `data`.
+ * (A `notification` block would make Android display a plain notification without the logo.)
+ */
+export const buildPushMessage = (job: PushJobData): messaging.Message => ({
+  token: job.token,
+  data: {
+    ...(job.data || {}),
+    title: job.title,
+    body: job.body,
+  },
+  android: { priority: 'high' },
+});
 
 let notificationQueue: Queue | null = null;
 
@@ -52,14 +71,7 @@ export const queuePushNotification = async (jobData: PushJobData): Promise<void>
   // Graceful fallback: execute directly inline if Redis is unavailable
   if (firebaseApp && jobData.token) {
     try {
-      await firebaseAdmin.messaging().send({
-        token: jobData.token,
-        notification: {
-          title: jobData.title,
-          body: jobData.body,
-        },
-        data: jobData.data || {},
-      });
+      await firebaseAdmin.messaging().send(buildPushMessage(jobData));
       console.log(`[Notification (Inline Fallback)] Push sent to token ending with ...${jobData.token.slice(-6)}`);
     } catch (err) {
       console.error('[Notification (Inline Fallback)] Failed to send push:', err);
