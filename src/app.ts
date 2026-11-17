@@ -20,7 +20,8 @@ app.use(
   cors({
     origin: '*', // Allow all client origins (mobile app & admin dashboard)
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'x-idempotency-key'],
+    exposedHeaders: ['X-Cache-Lookup'],
   })
 );
 app.use(express.json({ limit: '50mb' }));

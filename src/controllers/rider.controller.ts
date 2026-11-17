@@ -36,6 +36,15 @@ export class RiderController {
     }
   }
 
+  static async getDeliveryById(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const delivery = await RiderService.getDeliveryForRider(req.user!.userId, String(req.params.id));
+      sendSuccess({ res, message: 'Delivery retrieved successfully.', data: delivery });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.NOT_FOUND, message: error.message });
+    }
+  }
+
   static async updateAvailability(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const riderId = req.user!.userId;
@@ -107,6 +116,36 @@ export class RiderController {
       sendSuccess({
         res,
         message: 'OTP verified successfully. Delivery completed! 🎉',
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async verifyQr(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const riderId = req.user!.userId;
+      const deliveryId = String(req.params.id);
+      const { qrCodeToken } = req.body;
+      const result = await DeliveryService.completeDeliveryWithQr(deliveryId, riderId, qrCodeToken);
+      sendSuccess({
+        res,
+        message: 'QR code verified successfully. Delivery completed! 🎉',
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async getEarnings(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const riderId = req.user!.userId;
+      const result = await RiderService.getEarningsSummary(riderId);
+      sendSuccess({
+        res,
+        message: 'Rider earnings summary loaded.',
         data: result,
       });
     } catch (error: any) {

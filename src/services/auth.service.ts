@@ -4,6 +4,55 @@ import { signToken } from '../utils/jwt';
 import { Roles, RoleType } from '../constants/roles';
 import { NotificationService } from './notification.service';
 
+/**
+ * Normalizes phone numbers to standard format (+251...)
+ * Handles: "+251 911 000 001", "0911 000 001", "251911000001", "911000001"
+ */
+export function normalizePhoneNumber(phone: string): string {
+  if (!phone) return '';
+  const digits = phone.replace(/[^\d]/g, '');
+  if (digits.startsWith('251') && digits.length >= 12) {
+    return '+' + digits;
+  }
+  if (digits.startsWith('0') && digits.length >= 10) {
+    return '+251' + digits.slice(1);
+  }
+  if (digits.length === 9 && (digits.startsWith('9') || digits.startsWith('7'))) {
+    return '+251' + digits;
+  }
+  if (phone.trim().startsWith('+')) {
+    return '+' + digits;
+  }
+  return phone.trim();
+}
+
+/**
+ * Returns all possible variations of a phone number (normalized, local 09..., with/without +, with spaces)
+ */
+export function getPhoneVariations(phone: string): string[] {
+  if (!phone) return [];
+  const raw = phone.trim();
+  const norm = normalizePhoneNumber(phone);
+  const digits = phone.replace(/[^\d]/g, '');
+  const variations = new Set<string>();
+
+  if (raw) variations.add(raw);
+  if (norm) variations.add(norm);
+  if (digits) {
+    variations.add(digits);
+    if (norm.startsWith('+251')) {
+      const local = '0' + norm.slice(4);
+      variations.add(local);
+      variations.add(norm.slice(1)); // 251...
+      if (norm.length === 13) {
+        variations.add(`${norm.slice(0, 4)} ${norm.slice(4, 7)} ${norm.slice(7, 10)} ${norm.slice(10)}`);
+        variations.add(`${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`);
+      }
+    }
+  }
+  return Array.from(variations);
+}
+
 export class AuthService {
   /**
    * Register a new Customer (Immediate active)
@@ -79,9 +128,25 @@ export class AuthService {
    */
   static async loginCustomer(identifier: string, passwordPlain: string) {
     const isEmail = identifier.includes('@');
-    const customer = isEmail
-      ? await prisma.customer.findUnique({ where: { email: identifier } })
-      : await prisma.customer.findUnique({ where: { phoneNumber: identifier } });
+    const cleanId = identifier.trim();
+    let customer: any = null;
+
+    if (isEmail) {
+      customer = await prisma.customer.findUnique({ where: { email: cleanId } });
+    } else {
+      const candidates = getPhoneVariations(cleanId);
+      customer = await prisma.customer.findFirst({
+        where: { phoneNumber: { in: candidates } },
+      });
+      if (!customer) {
+        const norm = normalizePhoneNumber(cleanId);
+        const allCust = await prisma.customer.findMany({ select: { id: true, phoneNumber: true } });
+        const match = allCust.find(c => normalizePhoneNumber(c.phoneNumber) === norm);
+        if (match) {
+          customer = await prisma.customer.findUnique({ where: { id: match.id } });
+        }
+      }
+    }
 
     if (!customer) {
       throw new Error('Invalid phone number/email or password.');
@@ -117,24 +182,115 @@ export class AuthService {
   }
 
   /**
+   * Permanently delete a customer account (Google Play account-deletion requirement).
+   *
+   * Personal data is removed; anonymous order/payment records are kept for accounting and
+   * rider payouts (deleting the Customer row would cascade-delete all deliveries and orders).
+   * - Requires the account password.
+   * - Refused while an order is still in progress.
+   * - The phone number is freed so the person can register again later.
+   */
+  static async deleteCustomerAccount(customerId: string, passwordPlain: string) {
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new Error('Account not found.');
+
+    const isMatch = await bcrypt.compare(passwordPlain || '', customer.password);
+    if (!isMatch) throw new Error('Incorrect password. Please try again.');
+
+    const activeCount = await prisma.delivery.count({
+      where: { customerId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+    });
+    if (activeCount > 0) {
+      throw new Error('You have an order in progress. Please wait until it is delivered or cancelled, then delete your account.');
+    }
+
+    return this.anonymizeCustomer(customer);
+  }
+
+  /**
+   * Admin deletes a customer account: same clean-up as self-deletion (personal data removed,
+   * anonymous order records kept), without the customer's password.
+   */
+  static async adminDeleteCustomer(customerId: string) {
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new Error('Customer not found.');
+    if (customer.phoneNumber.startsWith('deleted_')) throw new Error('This customer account was already deleted.');
+
+    const activeCount = await prisma.delivery.count({
+      where: { customerId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+    });
+    if (activeCount > 0) {
+      throw new Error('This customer has an order in progress. Finish or cancel it first, then delete the account.');
+    }
+
+    return this.anonymizeCustomer(customer);
+  }
+
+  private static async anonymizeCustomer(customer: { id: string; phoneNumber: string }) {
+    const customerId = customer.id;
+    const unusablePassword = await bcrypt.hash(`${customerId}:${Date.now()}:${Math.random()}`, 10);
+
+    await prisma.$transaction([
+      prisma.notification.deleteMany({ where: { customerId } }),
+      prisma.phoneVerification.deleteMany({ where: { phoneNumber: customer.phoneNumber } }),
+      // Past deliveries: remove receiver and address details, keep the anonymous record
+      prisma.delivery.updateMany({
+        where: { customerId },
+        data: {
+          receiverName: 'Deleted user',
+          receiverPhone: '',
+          destination: 'Address removed (account deleted)',
+          destinationLatitude: null,
+          destinationLongitude: null,
+          specialInstructions: null,
+        },
+      }),
+      prisma.order.updateMany({ where: { customerId }, data: { specialInstructions: null } }),
+      prisma.customer.update({
+        where: { id: customerId },
+        data: {
+          fullName: 'Deleted user',
+          phoneNumber: `deleted_${customerId}`, // frees the real number for a future sign-up
+          email: null,
+          address: null,
+          fcmToken: null,
+          password: unusablePassword,
+          status: 'SUSPENDED', // can never log in again
+        },
+      }),
+    ]);
+
+    return { deleted: true };
+  }
+
+  /**
    * Register a new Rider (Starts with PENDING_APPROVAL)
    */
   static async registerRider(data: {
     fullName: string;
-    email: string;
+    email?: string;
     phoneNumber: string;
     password: string;
     vehicleInfo?: string;
+    fcmToken?: string;
   }) {
-    const existingEmail = await prisma.rider.findUnique({
-      where: { email: data.email },
-    });
-    if (existingEmail) {
-      throw new Error('Email address is already registered for a rider.');
+    if (data.email && data.email.trim() !== '') {
+      const existingEmail = await prisma.rider.findUnique({
+        where: { email: data.email.trim() },
+      });
+      if (existingEmail) {
+        throw new Error('Email address is already registered for a rider.');
+      }
     }
 
-    const existingPhone = await prisma.rider.findUnique({
-      where: { phoneNumber: data.phoneNumber },
+    const normPhone = normalizePhoneNumber(data.phoneNumber);
+    const phoneCandidates = getPhoneVariations(data.phoneNumber);
+
+    const existingPhone = await prisma.rider.findFirst({
+      where: {
+        phoneNumber: { in: phoneCandidates },
+        isDeleted: false,
+      },
     });
     if (existingPhone) {
       throw new Error('Phone number is already registered for a rider.');
@@ -145,19 +301,32 @@ export class AuthService {
     const rider = await prisma.rider.create({
       data: {
         fullName: data.fullName,
-        email: data.email,
-        phoneNumber: data.phoneNumber,
+        email: data.email && data.email.trim() !== '' ? data.email.trim() : null,
+        phoneNumber: normPhone,
         password: hashedPassword,
         vehicleInfo: data.vehicleInfo || null,
         accountStatus: 'PENDING_APPROVAL',
         availabilityStatus: 'OFFLINE',
+        isPhoneVerified: false,
+        fcmToken: data.fcmToken || null,
       },
     });
+
+    // Generate initial SMS OTP for phone verification
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await prisma.phoneVerification.create({
+      data: {
+        phoneNumber: rider.phoneNumber,
+        code: otpCode,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      },
+    });
+    console.log(`[SMS OTP] Verification code for ${rider.phoneNumber}: ${otpCode}`);
 
     // Notify admins to review the new rider registration
     NotificationService.notifyAdmins(
       'New Rider Application',
-      `Rider ${rider.fullName} (${rider.email}) registered and is awaiting approval.`,
+      `Rider ${rider.fullName} (${rider.phoneNumber}) registered and is awaiting approval.`,
       { riderId: rider.id }
     ).catch(() => {});
 
@@ -167,29 +336,60 @@ export class AuthService {
       email: rider.email,
       phoneNumber: rider.phoneNumber,
       accountStatus: rider.accountStatus,
-      message: 'Registration submitted successfully. Please wait for admin approval before logging in.',
+      isPhoneVerified: rider.isPhoneVerified,
+      message: 'Registration submitted successfully. Please verify your phone number.',
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otpCode } : {}),
     };
   }
 
   /**
-   * Rider Login (Requires email and must be ACTIVE)
+   * Rider Login (Accepts phone number or email, and checks active / not deleted / not deactivated)
    */
-  static async loginRider(email: string, passwordPlain: string) {
-    const rider = await prisma.rider.findUnique({
-      where: { email },
+  static async loginRider(identifier: string, passwordPlain: string) {
+    const cleanId = identifier.trim();
+    const phoneCandidates = getPhoneVariations(cleanId);
+
+    let rider = await prisma.rider.findFirst({
+      where: {
+        OR: [
+          ...phoneCandidates.map(p => ({ phoneNumber: p })),
+          { email: cleanId },
+        ],
+      },
     });
 
     if (!rider) {
-      throw new Error('Invalid email or password.');
+      // Robust fallback: search across active riders matching normalized digits
+      const normInput = normalizePhoneNumber(cleanId);
+      const allRiders = await prisma.rider.findMany({
+        where: { isDeleted: false },
+        select: { id: true, phoneNumber: true },
+      });
+      const match = allRiders.find(r => normalizePhoneNumber(r.phoneNumber) === normInput);
+      if (match) {
+        rider = await prisma.rider.findUnique({ where: { id: match.id } });
+      }
+    }
+
+    if (!rider) {
+      throw new Error('Invalid phone number or password.');
+    }
+
+    if (rider.isDeleted) {
+      throw new Error('This rider account has been removed. Please contact administration.');
+    }
+
+    if (rider.isDeactivated) {
+      throw new Error('Your rider account is currently deactivated. Please contact administration.');
     }
 
     const isMatch = await bcrypt.compare(passwordPlain, rider.password);
     if (!isMatch) {
-      throw new Error('Invalid email or password.');
+      throw new Error('Invalid phone number or password.');
     }
 
     if (rider.accountStatus === 'PENDING_APPROVAL') {
-      throw new Error('Your account is pending admin approval. You will be notified once activated.');
+      throw new Error('Your rider account is pending admin approval. You will receive a notification once an administrator approves your account.');
     }
 
     if (rider.accountStatus === 'SUSPENDED') {
@@ -212,8 +412,145 @@ export class AuthService {
         vehicleInfo: rider.vehicleInfo,
         availabilityStatus: rider.availabilityStatus,
         accountStatus: rider.accountStatus,
+        isPhoneVerified: rider.isPhoneVerified,
       },
       token,
+    };
+  }
+
+  /**
+   * Send Phone Verification SMS OTP
+   */
+  static async sendPhoneOtp(phoneNumber: string) {
+    const cleanPhone = phoneNumber.trim();
+    const normPhone = normalizePhoneNumber(cleanPhone);
+    const candidates = getPhoneVariations(cleanPhone);
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Invalidate previous unverified codes for this phone (any variation)
+    await prisma.phoneVerification.deleteMany({
+      where: { phoneNumber: { in: candidates }, isVerified: false },
+    });
+
+    await prisma.phoneVerification.create({
+      data: {
+        phoneNumber: normPhone,
+        code: otpCode,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      },
+    });
+
+    console.log(`[SMS OTP Service] Sent verification code to ${normPhone}: ${otpCode}`);
+    return {
+      success: true,
+      message: `Verification code sent to ${cleanPhone}.`,
+      // For development/testing convenience, include code in non-production
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otpCode } : {}),
+    };
+  }
+
+  /**
+   * Verify Phone SMS OTP
+   */
+  static async verifyPhoneOtp(phoneNumber: string, code: string) {
+    const cleanPhone = phoneNumber.trim();
+    const cleanCode = code.trim();
+    const candidates = getPhoneVariations(cleanPhone);
+
+    const record = await prisma.phoneVerification.findFirst({
+      where: {
+        phoneNumber: { in: candidates },
+        code: cleanCode,
+        isVerified: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new Error('Invalid or expired verification code.');
+    }
+
+    await prisma.phoneVerification.update({
+      where: { id: record.id },
+      data: { isVerified: true },
+    });
+
+    // Mark rider phone as verified, but retain PENDING_APPROVAL until admin approves
+    await prisma.rider.updateMany({
+      where: { phoneNumber: { in: candidates } },
+      data: { isPhoneVerified: true },
+    });
+
+    return {
+      success: true,
+      message: 'Phone number verified successfully. Your application is now pending admin approval.',
+    };
+  }
+
+  /**
+   * Reset Password with Phone SMS OTP
+   */
+  static async resetPasswordWithOtp(phoneNumber: string, code: string, newPassword: string) {
+    const cleanPhone = phoneNumber.trim();
+    const cleanCode = code.trim();
+    const candidates = getPhoneVariations(cleanPhone);
+
+    const record = await prisma.phoneVerification.findFirst({
+      where: {
+        phoneNumber: { in: candidates },
+        code: cleanCode,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new Error('Invalid or expired verification code.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const rider = await prisma.rider.findFirst({
+      where: { phoneNumber: { in: candidates } },
+    });
+
+    const customer = await prisma.customer.findFirst({
+      where: { phoneNumber: { in: candidates } },
+    });
+
+    if (!rider && !customer) {
+      throw new Error('No account found associated with this phone number.');
+    }
+
+    if (rider) {
+      await prisma.rider.update({
+        where: { id: rider.id },
+        data: {
+          password: hashedPassword,
+          isPhoneVerified: true,
+          accountStatus: 'ACTIVE',
+        },
+      });
+    }
+
+    if (customer) {
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          password: hashedPassword,
+        },
+      });
+    }
+
+    await prisma.phoneVerification.update({
+      where: { id: record.id },
+      data: { isVerified: true },
+    });
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully. You can now log in with your new password.',
     };
   }
 
@@ -247,6 +584,22 @@ export class AuthService {
         email: admin.email,
         role: admin.role,
       },
+      token,
+    };
+  }
+
+  /**
+   * Refresh Admin Session: a signed-in admin (valid token) gets a fresh token,
+   * so the admin dashboard stays signed in while it is used.
+   */
+  static async refreshAdminToken(userId: string, role: RoleType) {
+    if (role !== Roles.ADMIN) throw new Error('Only admins can refresh an admin session.');
+    const admin = await prisma.admin.findUnique({ where: { id: userId } });
+    if (!admin) throw new Error('Admin account not found. Please sign in again.');
+
+    const token = signToken({ userId: admin.id, role: Roles.ADMIN, email: admin.email });
+    return {
+      admin: { id: admin.id, fullName: admin.fullName, email: admin.email, role: admin.role },
       token,
     };
   }
@@ -352,6 +705,15 @@ export class AuthService {
    * Update FCM Token
    */
   static async updateFcmToken(userId: string, role: RoleType, fcmToken: string) {
+    // A phone's token belongs to one account at a time: remove it from any other account first,
+    // so notifications never go to a previous user of the same phone.
+    if (fcmToken) {
+      await prisma.$transaction([
+        prisma.customer.updateMany({ where: { fcmToken, NOT: role === Roles.CUSTOMER ? { id: userId } : undefined }, data: { fcmToken: null } }),
+        prisma.rider.updateMany({ where: { fcmToken, NOT: role === Roles.RIDER ? { id: userId } : undefined }, data: { fcmToken: null } }),
+        prisma.admin.updateMany({ where: { fcmToken, NOT: role === Roles.ADMIN ? { id: userId } : undefined }, data: { fcmToken: null } }),
+      ]);
+    }
     if (role === Roles.CUSTOMER) {
       await prisma.customer.update({ where: { id: userId }, data: { fcmToken } });
     } else if (role === Roles.RIDER) {
@@ -360,5 +722,16 @@ export class AuthService {
       await prisma.admin.update({ where: { id: userId }, data: { fcmToken } });
     }
     return true;
+  }
+
+  /** Removes the account's push token (used on logout). */
+  static async clearFcmToken(userId: string, role: RoleType) {
+    if (role === Roles.CUSTOMER) {
+      await prisma.customer.update({ where: { id: userId }, data: { fcmToken: null } });
+    } else if (role === Roles.RIDER) {
+      await prisma.rider.update({ where: { id: userId }, data: { fcmToken: null } });
+    } else if (role === Roles.ADMIN) {
+      await prisma.admin.update({ where: { id: userId }, data: { fcmToken: null } });
+    }
   }
 }

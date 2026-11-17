@@ -9,10 +9,19 @@ import {
   riderLoginSchema,
   adminLoginSchema,
   changePasswordSchema,
+  deleteAccountSchema,
   updateFcmTokenSchema,
+  sendPhoneOtpSchema,
+  verifyPhoneOtpSchema,
+  resetPasswordPhoneSchema,
 } from '../validations/auth.validation';
 
 const router = Router();
+
+// Phone OTP verification & Password Reset (for Riders and Customers)
+router.post('/phone/send-otp', validateRequest(sendPhoneOtpSchema), AuthController.sendPhoneOtp);
+router.post('/phone/verify-otp', validateRequest(verifyPhoneOtpSchema), AuthController.verifyPhoneOtp);
+router.post('/phone/reset-password', validateRequest(resetPasswordPhoneSchema), AuthController.resetPasswordPhone);
 
 // Customer Auth
 router.post('/register', validateRequest(customerRegisterSchema), AuthController.registerCustomer);
@@ -26,11 +35,15 @@ router.post('/rider/login', validateRequest(riderLoginSchema), AuthController.lo
 
 // Admin Auth
 router.post('/admin/login', validateRequest(adminLoginSchema), AuthController.loginAdmin);
+// Keeps the admin signed in: swaps a still-valid admin token for a fresh one
+router.post('/admin/refresh', authenticateJwt, AuthController.refreshAdminToken);
 
 // Common Authenticated User Endpoints
 router.get('/me', authenticateJwt, AuthController.getMe);
 router.post('/logout', authenticateJwt, AuthController.logout);
 router.put('/change-password', authenticateJwt, validateRequest(changePasswordSchema), AuthController.changePassword);
 router.put('/fcm-token', authenticateJwt, validateRequest(updateFcmTokenSchema), AuthController.updateFcmToken);
+// Account deletion (Google Play requirement): password-confirmed, removes personal data
+router.post('/account/delete', authenticateJwt, validateRequest(deleteAccountSchema), AuthController.deleteAccount);
 
 export default router;

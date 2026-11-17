@@ -3,6 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { sendSuccess, sendError } from '../utils/apiResponse';
 import { HttpStatus } from '../constants/httpCodes';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { Roles } from '../constants/roles';
 
 export class AuthController {
   static async registerCustomer(req: Request, res: Response): Promise<void> {
@@ -49,8 +50,9 @@ export class AuthController {
 
   static async loginRider(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
-      const result = await AuthService.loginRider(email, password);
+      const identifier = req.body.phoneNumber || req.body.identifier || req.body.email;
+      const { password } = req.body;
+      const result = await AuthService.loginRider(identifier, password);
       sendSuccess({
         res,
         message: 'Rider logged in successfully.',
@@ -58,6 +60,48 @@ export class AuthController {
       });
     } catch (error: any) {
       sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: error.message });
+    }
+  }
+
+  static async sendPhoneOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { phoneNumber } = req.body;
+      const result = await AuthService.sendPhoneOtp(phoneNumber);
+      sendSuccess({
+        res,
+        message: result.message,
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async verifyPhoneOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { phoneNumber, code } = req.body;
+      const result = await AuthService.verifyPhoneOtp(phoneNumber, code);
+      sendSuccess({
+        res,
+        message: result.message,
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
+  static async resetPasswordPhone(req: Request, res: Response): Promise<void> {
+    try {
+      const { phoneNumber, code, newPassword } = req.body;
+      const result = await AuthService.resetPasswordWithOtp(phoneNumber, code, newPassword);
+      sendSuccess({
+        res,
+        message: result.message,
+        data: result,
+      });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
     }
   }
 
@@ -75,6 +119,20 @@ export class AuthController {
     }
   }
 
+  /** POST /auth/admin/refresh: returns a new admin token so an active admin stays signed in. */
+  static async refreshAdminToken(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: 'Authentication required.' });
+        return;
+      }
+      const result = await AuthService.refreshAdminToken(req.user.userId, req.user.role);
+      sendSuccess({ res, message: 'Session refreshed.', data: result });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: error.message });
+    }
+  }
+
   static async getMe(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       if (!req.user) {
@@ -85,6 +143,24 @@ export class AuthController {
       sendSuccess({ res, message: 'Current user profile loaded.', data: result });
     } catch (error: any) {
       sendError({ res, statusCode: HttpStatus.NOT_FOUND, message: error.message });
+    }
+  }
+
+  /** POST /auth/account/delete: customer deletes their own account (password required). */
+  static async deleteAccount(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        sendError({ res, statusCode: HttpStatus.UNAUTHORIZED, message: 'Authentication required.' });
+        return;
+      }
+      if (req.user.role !== Roles.CUSTOMER) {
+        sendError({ res, statusCode: HttpStatus.FORBIDDEN, message: 'Please contact support to delete this account.' });
+        return;
+      }
+      const result = await AuthService.deleteCustomerAccount(req.user.userId, req.body.password);
+      sendSuccess({ res, message: 'Your account has been deleted.', data: result });
+    } catch (error: any) {
+      sendError({ res, statusCode: HttpStatus.BAD_REQUEST, message: error.message });
     }
   }
 
@@ -117,7 +193,13 @@ export class AuthController {
   }
 
   static async logout(req: AuthenticatedRequest, res: Response): Promise<void> {
-    // JWT is stateless; client drops token, but we can clear device FCM token if requested
+    // JWT is stateless (the app drops it). Clear this account's push token so the phone stops
+    // receiving this user's notifications after logout (important on shared phones).
+    try {
+      if (req.user) await AuthService.clearFcmToken(req.user.userId, req.user.role);
+    } catch (error: any) {
+      console.warn('[Logout] Could not clear FCM token:', error.message);
+    }
     sendSuccess({ res, message: 'Logged out successfully.' });
   }
 }

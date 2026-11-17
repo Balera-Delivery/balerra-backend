@@ -4,11 +4,30 @@ import { CustomerService } from '../services/customer.service';
 import { DeliveryService } from '../services/delivery.service';
 import { OtpService } from '../services/otp.service';
 import { NotificationService } from '../services/notification.service';
+import { PricingService } from '../services/pricing.service';
 import { sendSuccess, sendError } from '../utils/apiResponse';
 import { HttpStatus } from '../constants/httpCodes';
 import { Roles } from '../constants/roles';
 
 export class CustomerController {
+  /**
+   * POST /customer/quote
+   * Returns the exact checkout price calculated by the server.
+   * Body with items -> food cart quote; without items -> package delivery quote.
+   */
+  static async getCheckoutQuote(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const customerId = req.user!.userId;
+      const { items, promoCode } = req.body as { items?: Array<{ foodItemId: string; quantity?: number; notes?: string }>; promoCode?: string };
+      const quote = Array.isArray(items) && items.length > 0
+        ? await PricingService.quoteFood(items, { promoCode, customerId })
+        : await PricingService.quotePackage({ promoCode, customerId });
+      sendSuccess({ res, message: 'Checkout quote calculated.', data: quote });
+    } catch (error: any) {
+      sendError({ res, statusCode: error.statusCode || HttpStatus.BAD_REQUEST, message: error.message });
+    }
+  }
+
   static async createDelivery(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const customerId = req.user!.userId;
@@ -82,7 +101,8 @@ export class CustomerController {
         return;
       }
 
-      const otp = await OtpService.getDeliveryOtp(deliveryId);
+      // Use the resolved UUID: the route param may be a tracking code (e.g. BAL-2026-X7K9M2)
+      const otp = await OtpService.getDeliveryOtp(delivery.id);
       sendSuccess({
         res,
         message: 'Delivery completion OTP retrieved.',

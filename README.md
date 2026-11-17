@@ -117,12 +117,12 @@ Ensure your `.env` file contains your database connection string:
 ```env
 PORT=5000
 NODE_ENV=development
-DATABASE_URL="postgresql://postgres:fayo@localhost:5432/balera_delivery?schema=public"
-JWT_SECRET="balerra_delivery_jwt_super_secret_key_2026_xYz"
+DATABASE_URL="postgresql://postgres:YOUR_DB_PASSWORD@localhost:5432/balera_delivery?schema=public"
+JWT_SECRET="CHANGE_ME_long_random_secret"
 JWT_EXPIRES_IN="7d"
 FIREBASE_SERVICE_ACCOUNT_PATH="./firebase-service-account.json"
-DEFAULT_ADMIN_EMAIL="admin@balera.com"
-DEFAULT_ADMIN_PASSWORD="AdminPassword@123"
+DEFAULT_ADMIN_EMAIL="admin@example.com"
+DEFAULT_ADMIN_PASSWORD="CHANGE_ME_strong_password"
 DEFAULT_ADMIN_NAME="Super Administrator"
 ```
 

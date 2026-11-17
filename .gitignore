@@ -4,3 +4,6 @@ dist/
 *.log
 npm-debug.log*
 .DS_Store
+
+# Firebase Admin private key: NEVER commit (secret)
+firebase-service-account.json

@@ -1,6 +1,8 @@
 import { prisma } from '../config/prisma';
-import { firebaseApp, firebaseAdmin } from '../config/firebase';
+import { firebaseApp } from '../config/firebase';
 import { RoleType, Roles } from '../constants/roles';
+import { queuePushNotification } from '../queues/notification.queue';
+import { broadcastAdminNotification, broadcastRiderNotification } from '../socket';
 
 export interface CreateNotificationParams {
   role: RoleType;
@@ -33,6 +35,8 @@ export class NotificationService {
 
     if (role === Roles.CUSTOMER) {
       notificationData.customerId = recipientId;
+      notificationData.riderId = null;
+      notificationData.adminId = null;
       const customer = await prisma.customer.findUnique({
         where: { id: recipientId },
         select: { fcmToken: true },
@@ -40,6 +44,8 @@ export class NotificationService {
       fcmToken = customer?.fcmToken || null;
     } else if (role === Roles.RIDER) {
       notificationData.riderId = recipientId;
+      notificationData.customerId = null;
+      notificationData.adminId = null;
       const rider = await prisma.rider.findUnique({
         where: { id: recipientId },
         select: { fcmToken: true },
@@ -47,6 +53,8 @@ export class NotificationService {
       fcmToken = rider?.fcmToken || null;
     } else if (role === Roles.ADMIN) {
       notificationData.adminId = recipientId;
+      notificationData.customerId = null;
+      notificationData.riderId = null;
       const admin = await prisma.admin.findUnique({
         where: { id: recipientId },
         select: { fcmToken: true },
@@ -58,23 +66,40 @@ export class NotificationService {
       data: notificationData,
     });
 
-    // 2. Dispatch FCM Push Notification if Firebase is initialized and token is available
-    if (firebaseApp && fcmToken) {
-      try {
-        await firebaseAdmin.messaging().send({
-          token: fcmToken,
-          notification: {
-            title,
-            body: message,
-          },
-          data: metadata ? Object.fromEntries(
-            Object.entries(metadata).map(([k, v]) => [k, String(v)])
-          ) : {},
-        });
-        console.log(`[Notification] FCM push sent to ${role} (${recipientId})`);
-      } catch (err) {
-        console.error(`[Notification] Failed to send FCM push to ${recipientId}:`, err);
-      }
+    // Broadcast immediately to WebSockets
+    if (role === Roles.ADMIN) {
+      broadcastAdminNotification({
+        id: savedNotification.id,
+        title: savedNotification.title,
+        message: savedNotification.message,
+        createdAt: savedNotification.createdAt.toISOString(),
+        userRole: Roles.ADMIN,
+        metadata: savedNotification.metadata as Record<string, any>,
+      });
+    } else if (role === Roles.RIDER) {
+      broadcastRiderNotification({
+        riderId: recipientId,
+        id: savedNotification.id,
+        title: savedNotification.title,
+        message: savedNotification.message,
+        createdAt: savedNotification.createdAt.toISOString(),
+        userRole: Roles.RIDER,
+        metadata: savedNotification.metadata as Record<string, any>,
+      });
+    }
+
+    // 2. Dispatch FCM Push Notification via BullMQ background queue (with automatic fallback)
+    if (fcmToken) {
+      queuePushNotification({
+        token: fcmToken,
+        title,
+        body: message,
+        data: metadata ? Object.fromEntries(
+          Object.entries(metadata).map(([k, v]) => [k, String(v)])
+        ) : undefined,
+      }).catch((err) => {
+        console.error(`[Notification Queue] Failed to queue FCM push to ${recipientId}:`, err);
+      });
     }
 
     return savedNotification;
@@ -138,7 +163,7 @@ export class NotificationService {
    */
   static async getUserNotifications(userId: string, role: RoleType, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: any = { userRole: role };
 
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
@@ -161,7 +186,7 @@ export class NotificationService {
    * Mark single notification as read
    */
   static async markAsRead(notificationId: string, userId: string, role: RoleType) {
-    const where: any = { id: notificationId };
+    const where: any = { id: notificationId, userRole: role };
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
     else if (role === Roles.ADMIN) where.adminId = userId;
@@ -176,7 +201,7 @@ export class NotificationService {
    * Mark all notifications as read for current user
    */
   static async markAllAsRead(userId: string, role: RoleType) {
-    const where: any = {};
+    const where: any = { userRole: role, isRead: false };
     if (role === Roles.CUSTOMER) where.customerId = userId;
     else if (role === Roles.RIDER) where.riderId = userId;
     else if (role === Roles.ADMIN) where.adminId = userId;
@@ -184,6 +209,34 @@ export class NotificationService {
     return prisma.notification.updateMany({
       where,
       data: { isRead: true },
+    });
+  }
+
+  /**
+   * Delete single notification
+   */
+  static async deleteNotification(notificationId: string, userId: string, role: RoleType) {
+    const where: any = { id: notificationId, userRole: role };
+    if (role === Roles.CUSTOMER) where.customerId = userId;
+    else if (role === Roles.RIDER) where.riderId = userId;
+    else if (role === Roles.ADMIN) where.adminId = userId;
+
+    return prisma.notification.deleteMany({
+      where,
+    });
+  }
+
+  /**
+   * Clear all notifications for current user
+   */
+  static async clearAllNotifications(userId: string, role: RoleType) {
+    const where: any = { userRole: role };
+    if (role === Roles.CUSTOMER) where.customerId = userId;
+    else if (role === Roles.RIDER) where.riderId = userId;
+    else if (role === Roles.ADMIN) where.adminId = userId;
+
+    return prisma.notification.deleteMany({
+      where,
     });
   }
 }

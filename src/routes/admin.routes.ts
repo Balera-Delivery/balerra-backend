@@ -38,10 +38,19 @@ router.post('/customers', validateRequest(adminCreateCustomerSchema), AdminContr
 router.get('/customers/:id', AdminController.getCustomerById);
 router.put('/customers/:id', validateRequest(adminUpdateCustomerSchema), AdminController.updateCustomer);
 router.patch('/customers/:id/status', validateRequest(updateAccountStatusSchema), AdminController.setCustomerStatus);
+router.delete('/customers/:id', AdminController.deleteCustomer);
 
 // Rider Management
 router.get('/riders', AdminController.getRiders);
 router.get('/riders/nearby', AdminController.getNearbyRiders);
+router.get('/riders/payouts', AdminController.getRiderPayoutsSummary);
+router.get('/riders/payouts/history', AdminController.getPayoutHistory);
+router.get('/riders/:id/payouts', AdminController.getRiderPaymentHistory);
+router.post('/riders/:id/pay', AdminController.markRiderPaid);
+router.patch('/riders/:id/deactivate', AdminController.toggleRiderDeactivation);
+router.patch('/riders/:id/availability', AdminController.setRiderAvailability);
+router.patch('/riders/:id/password', AdminController.resetRiderPassword);
+router.delete('/riders/:id', AdminController.deleteRider);
 router.post('/riders', validateRequest(adminCreateRiderSchema), AdminController.createRider);
 router.get('/riders/:id', AdminController.getRiderById);
 router.patch('/riders/:id/approve', AdminController.approveRider);
@@ -67,6 +76,7 @@ router.put('/assign-rider', validateRequest(assignRiderSchema), (req, res, next)
 });
 router.post('/deliveries/:id/cancel', validateRequest(cancelDeliverySchema), AdminController.cancelDelivery);
 router.patch('/deliveries/:id/payment-status', AdminController.updatePaymentStatus);
+router.patch('/deliveries/:id/status', AdminController.overrideDeliveryStatus);
 
 // Hotels & Restaurants Management
 router.get('/restaurants', RestaurantController.getRestaurants);
@@ -94,9 +104,13 @@ router.post('/restaurants/seed-defaults', RestaurantController.seedDefaults);
 
 // Reports
 router.get('/reports', AdminController.getReports);
+router.get('/reports/deliveries', AdminController.getDeliveriesReport);
+router.get('/reports/export', AdminController.exportDeliveriesReport);
 
 // System Settings
 router.get('/settings', AdminController.getSettings);
 router.put('/settings', validateRequest(updateSystemSettingSchema), AdminController.updateSetting);
+router.get('/settings/payment', AdminController.getPaymentSettings);
+router.put('/settings/payment', AdminController.updatePaymentSettings);
 
 export default router;

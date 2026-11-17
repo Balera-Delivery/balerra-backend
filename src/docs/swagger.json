@@ -126,11 +126,11 @@
         "properties": {
           "email": {
             "type": "string",
-            "example": "admin@balera.com"
+            "example": "admin@example.com"
           },
           "password": {
             "type": "string",
-            "example": "AdminPassword@123"
+            "example": "your-admin-password"
           }
         }
       },

@@ -1,3 +1,5 @@
+export const BALERA_DEFAULT_BANNER = '/balera_partner_cover.svg';
+
 export const initialHotels = [
   {
     id: 'HTL-001',
@@ -16,7 +18,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '06:30 AM - 10:00 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -108,7 +110,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '07:00 AM - 10:30 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -220,7 +222,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '07:30 AM - 11:00 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -342,7 +344,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '06:00 AM - 09:30 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -464,7 +466,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '06:00 AM - 11:30 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -616,7 +618,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '08:00 AM - 11:00 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -748,7 +750,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '06:30 AM - 10:30 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -870,7 +872,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '05:30 AM - 10:00 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=200&auto=format&fit=crop&q=80',
     foods: [
       // Breakfast (Ciree)
@@ -1144,7 +1146,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '06:00 AM - 11:00 PM',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200&auto=format&fit=crop&q=80',
     foods: [
       {
@@ -1266,7 +1268,7 @@ export const initialHotels = [
     status: 'Active',
     openingHours: '24 Hours / All Day Dining',
     isPartner: true,
-    banner: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80',
+    banner: BALERA_DEFAULT_BANNER,
     avatar: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&auto=format&fit=crop&q=80',
     foods: [
       {

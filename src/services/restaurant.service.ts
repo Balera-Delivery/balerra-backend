@@ -148,7 +148,7 @@ export class RestaurantService {
         status: data.status || 'Active',
         openingHours: data.openingHours || '07:00 AM - 10:00 PM',
         isPartner: data.isPartner !== undefined ? data.isPartner : true,
-        banner: data.banner || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
+        banner: data.banner || '/balera_partner_cover.svg',
         avatar: data.avatar || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&auto=format&fit=crop&q=80',
       },
       include: {
@@ -352,7 +352,8 @@ export class RestaurantService {
     page?: number;
     limit?: number;
   }) {
-    const { search, restaurantId, category, isAvailable, page = 1, limit = 100 } = options;
+    // Default limit is high enough to return the full menu (the customer app shows all dishes).
+    const { search, restaurantId, category, isAvailable, page = 1, limit = 500 } = options;
 
     const where: any = {};
 
